@@ -1,0 +1,19 @@
+# Build output
+bin/
+obj/
+artifacts/
+
+# Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+*.user
+*.suo
+*.DotSettings.user
+
+# Test & coverage output
+[Tt]est[Rr]esult*/
+coverage*.xml
+coverage*.json
+
+# Local tooling caches
+*.binlog

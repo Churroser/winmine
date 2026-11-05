@@ -1,0 +1,11 @@
+# Normalize text files to LF in the repository, keep CRLF off the wire.
+* text=auto eol=lf
+
+# Binary assets
+*.png binary
+*.ico binary
+*.wav binary
+
+# Windows-only scripts: PowerShell is fine with LF, but keep CRLF for .cmd/.bat
+*.cmd text eol=crlf
+*.bat text eol=crlf

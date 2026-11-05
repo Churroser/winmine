@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="WinMine.Views.CustomGameDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="自定义棋盘"
+    PrimaryButtonText="开始游戏"
+    CloseButtonText="取消"
+    DefaultButton="Primary"
+    PrimaryButtonClick="OnPrimaryButtonClick">
+
+    <StackPanel Width="348" Spacing="14">
+        <Grid ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Spacing="6">
+                <TextBlock Text="列数（宽）" Style="{StaticResource CaptionTextBlockStyle}" />
+                <NumberBox
+                    x:Name="ColumnsBox"
+                    MinWidth="140"
+                    ValueChanged="OnValueChanged"
+                    SpinButtonPlacementMode="Hidden"
+                    SmallChange="1"
+                    LargeChange="5" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Spacing="6">
+                <TextBlock Text="行数（高）" Style="{StaticResource CaptionTextBlockStyle}" />
+                <NumberBox
+                    x:Name="RowsBox"
+                    MinWidth="140"
+                    ValueChanged="OnValueChanged"
+                    SpinButtonPlacementMode="Hidden"
+                    SmallChange="1"
+                    LargeChange="5" />
+            </StackPanel>
+        </Grid>
+
+        <StackPanel Spacing="6">
+            <TextBlock Text="雷数" Style="{StaticResource CaptionTextBlockStyle}" />
+            <NumberBox
+                x:Name="MinesBox"
+                MinWidth="140"
+                ValueChanged="OnValueChanged"
+                SpinButtonPlacementMode="Hidden"
+                SmallChange="1"
+                LargeChange="5" />
+        </StackPanel>
+
+        <InfoBar
+            x:Name="ValidationBar"
+            IsOpen="False"
+            IsClosable="False"
+            Severity="Warning"
+            Message="参数无效" />
+
+        <TextBlock
+            Text="提示：列 3–40，行 3–30，雷数最多为格子总数减一；第一次点击永远不会踩雷。"
+            TextWrapping="Wrap"
+            Style="{StaticResource CaptionTextBlockStyle}" />
+    </StackPanel>
+</ContentDialog>
