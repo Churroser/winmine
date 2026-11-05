@@ -1,104 +1,104 @@
-# 扫雷 · WinMine
+# Minesweeper · WinMine
 
-简体中文 · [English](README.en.md)
+English · [简体中文](README.zh-CN.md)
 
-用 **WinUI 3 / Windows App SDK** 复刻的经典扫雷，按 Windows 11 Fluent Design 重做界面：Mica 背景、自定义标题栏、圆角卡片、Segoe Fluent Icons 图标、浅色/深色主题自适应。
+A faithful rebuild of classic Minesweeper on **WinUI 3 / Windows App SDK**, restyled after Windows 11 Fluent Design: Mica backdrop, custom title bar, rounded cards, Segoe Fluent Icons glyphs, and automatic light/dark theming.
 
-![初级·浅色](docs/screenshots/01-beginner-new-light.png)
+![Beginner, light](docs/screenshots/01-beginner-new-light.png)
 
-| 进行中（浅色） | 通关（浅色） | 踩雷（浅色） |
+| In progress (light) | Won (light) | Hit a mine (light) |
 | --- | --- | --- |
 | ![](docs/screenshots/02-beginner-playing-light.png) | ![](docs/screenshots/03-beginner-won-light.png) | ![](docs/screenshots/04-beginner-lost-light.png) |
 
-| 中级（深色） | 高级（深色） | 自定义棋盘对话框 |
+| Intermediate (dark) | Expert (dark) | Custom board dialog |
 | --- | --- | --- |
 | ![](docs/screenshots/05-intermediate-playing-dark.png) | ![](docs/screenshots/06-expert-playing-dark.png) | ![](docs/screenshots/08-custom-dialog-light.png) |
 
-## 功能
+## Features
 
-| 分类 | 内容 |
+| Area | What it does |
 | --- | --- |
-| 玩法 | 左键翻开 · 右键插旗 · 中键或再次点击已翻开的数字快速展开（chord）· 第一次点击永远安全（3×3 保护区） |
-| 键盘 | 方向键移动；空格/回车翻开或展开；`F` 插旗；`F2` / `Ctrl+N` 重开；`Ctrl+1/2/3` 切换初级/中级/高级（无焦点冲突，鼠标悬停棋盘不会弹出按键气泡） |
-| 难度 | 初级 9×9/10 雷、中级 16×16/40 雷、高级 16×30/99 雷、自定义（列 3–40，行 3–30；输入框无上下箭头，直接键入数字，取值自动夹紧） |
-| 状态栏 | 剩余雷数、计时器（0–999 秒）、表情按钮（点击重开）、最佳成绩 |
-| 界面 | 自动跟随系统深浅色或手动指定；窗口按棋盘大小自适应并居中；DWM 标题栏按钮配色跟随主题 |
-| 音效 | 翻开 / 泛洪 / 插旗 / 取消插旗 / 快速展开 / 爆炸 / 通关，全部为运行时合成的 PCM 音块；按钮与菜单用 WinUI 自带的 `ElementSoundPlayer`；可在设置里静音 |
-| 设置 | 外观（跟随系统 / 浅色 / 深色）、音效开关、重置最佳成绩、关于 |
+| Gameplay | Left-click to reveal · right-click to flag · middle-click or re-click a revealed number to chord · the first click is always safe (3×3 protected area) |
+| Keyboard | Arrow keys move the cursor; Space/Enter reveals or chords; `F` flags; `F2` / `Ctrl+N` restarts; `Ctrl+1/2/3` switches Beginner/Intermediate/Expert (no focus conflicts, and hovering the board never pops a key-tip bubble) |
+| Difficulty | Beginner 9×9/10 mines, Intermediate 16×16/40 mines, Expert 16×30/99 mines, custom (3–40 columns, 3–30 rows; number boxes have no spin buttons — type a value and it is clamped to range) |
+| HUD | Mines remaining, timer (0–999 s), face button (click to restart), best time |
+| Appearance | Follows the system theme or an explicit choice; the window sizes itself to the board and re-centres; DWM caption buttons are recoloured to match the theme |
+| Sound | Reveal / flood / flag / unflag / chord / explode / win, all PCM blocks synthesised at runtime; buttons and menus use WinUI's built-in `ElementSoundPlayer`; everything can be muted in Settings |
+| Settings | Appearance (system / light / dark), sound toggle, reset best times, about |
 
-## 构建与运行
+## Build and run
 
-需要 .NET 10 SDK 与 Windows App Runtime 2.6（`Microsoft.WindowsAppSDK 2.6.4`，非自包含）。
+Requires the .NET 10 SDK and Windows App Runtime 2.6 (`Microsoft.WindowsAppSDK 2.6.4`, framework-dependent).
 
 ```powershell
 dotnet build WinMine.sln -c Release
 dotnet run --project src/WinMine/WinMine.csproj
 ```
 
-可执行文件（非打包 Win32 应用，可直接双击）：
+Executable (an unpackaged Win32 app — just double-click it):
 
 ```
 src/WinMine/bin/x64/Release/net10.0-windows10.0.26100.0/win-x64/WinMine.exe
 ```
 
-发布单目录版本：
+Publish a single-folder build:
 
 ```powershell
 dotnet publish src/WinMine/WinMine.csproj -c Release -r win-x64 --self-contained false -o publish
 ```
 
-## 项目结构
+## Project layout
 
 ```
 WinMine.sln
-src/WinMine.Core/            纯 .NET 游戏引擎（无 UI 依赖，可单元测试）
+src/WinMine.Core/            pure .NET game engine (no UI dependency, unit-testable)
   Cell.cs                    Cell / CellInfo / MoveResult / GameStatus
-  Minefield.cs               棋盘状态机：延迟布雷、泛洪、插旗、chord、胜负判定
-  Difficulty.cs              BoardPreset 与 DifficultyPresets
-  BestTimes.cs               最佳成绩
-  GameSettings.cs            JSON 设置模型
-src/WinMine/                 WinUI 3 应用
-  MainWindow.xaml(.cs)       Fluent 布局、标题栏、计时、主题、菜单
-  MainWindow.Capture.cs      --capture DIR 截图自检
-  MainWindow.SelfTest.cs     --selftest FILE 交互自检
-  Controls/BoardView.cs      自绘棋盘面板（输入、动画、焦点环）
-  Controls/CellVisual.cs     单格视觉（圆角瓷砖 + 矢量旗/雷/错旗）
-  Controls/BoardPalette.cs   双主题调色板
-  Views/CustomGameDialog.xaml 自定义棋盘对话框
+  Minefield.cs               board state machine: deferred mine placement, flood fill, flags, chording, win/lose
+  Difficulty.cs              BoardPreset and DifficultyPresets
+  BestTimes.cs               best times
+  GameSettings.cs            JSON settings model
+src/WinMine/                 WinUI 3 app
+  MainWindow.xaml(.cs)       Fluent layout, title bar, timer, theming, menus
+  MainWindow.Capture.cs      --capture DIR screenshot self-check
+  MainWindow.SelfTest.cs     --selftest FILE interaction self-check
+  Controls/BoardView.cs      custom-drawn board panel (input, animation, focus ring)
+  Controls/CellVisual.cs     per-cell visual (rounded tile + vector flag/mine/wrong-flag)
+  Controls/BoardPalette.cs   two-theme palette
+  Views/CustomGameDialog.xaml custom board dialog
   Services/SettingsStore.cs  %LOCALAPPDATA%\WinMine\settings.json
-  Services/GameSounds.cs     运行时合成的 PCM 音效 + winmm PlaySound
-  Services/UiSounds.cs       WinUI 自带 ElementSoundPlayer 包装（Invoke/MoveNext…）
-tests/WinMine.Core.Tests/    28 个 xunit 测试
-tools/make-icon.ps1          生成 Assets/winmine.png + winmine.ico
-tools/set-repo-meta.ps1      通过 REST API 设置仓库 description / topics
-tools/repo-description.txt   给上面那个脚本读的 UTF-8 描述文案
+  Services/GameSounds.cs     runtime-synthesised PCM + winmm PlaySound
+  Services/UiSounds.cs       wrapper over WinUI's ElementSoundPlayer (Invoke/MoveNext/…)
+tests/WinMine.Core.Tests/    28 xunit tests
+tools/make-icon.ps1          generates Assets/winmine.png + winmine.ico
+tools/set-repo-meta.ps1      sets repo description/topics through the REST API
+tools/repo-description.txt   UTF-8 description text that script feeds to the API
 ```
 
-## 验证
+## Verification
 
 ```powershell
-# 引擎单元测试（28 项）
+# Engine unit tests (28)
 dotnet test tests/WinMine.Core.Tests/WinMine.Core.Tests.csproj
 
-# 界面自检：驱动真实窗口与棋盘控件，输出 PASS/FAIL 报告
+# UI self-check: drives the real window and board control, writes a PASS/FAIL report
 src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --selftest artifacts/selftest.txt
 
-# 界面截图：把脚本化的 8 个状态渲染成 PNG（不需要可见桌面）
+# UI screenshots: renders 8 scripted states to PNG (no visible desktop required)
 src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --capture artifacts/shots
 ```
 
-`--selftest` 覆盖 68 项检查：首点安全、泛洪范围、插旗/取消插旗/已翻开格拒绝插旗、chord 展开、计时器走动、通关自动插旗与最佳成绩、踩雷揭示全部地雷与拒绝后续操作、三档难度与自定义棋盘的格子数量、窗口不超出工作区、设置 JSON 往返、主题切换，快捷键与“界面里不存在加速键提示源”（专门守住“悬停棋盘冒出 F2 气泡”这个回归），自定义棋盘对话框的输入框状态（全部隐藏上下箭头、取值区间受控），以及音效（WAV 头合法、时长、880 Hz 音高实测、静音后不输出、音频设备接受播放、WinUI 控件音效可用）。
+`--selftest` covers 68 checks: first-click safety, flood-fill extent, flag/unflag/reject-flag-on-revealed, chording, the timer actually ticking, auto-flagging plus best time on a win, all mines revealed and further input ignored after a loss, cell counts for all three presets and for custom boards, the window staying inside the work area, settings JSON round-trip, theme switching, the shortcuts plus "no accelerator key-tip source exists anywhere in the visual tree" (a regression guard for the F2 bubble that used to appear when hovering the board), the custom dialog's number-box state (all spin buttons hidden, values clamped), and audio (valid WAV headers, durations, a measured 880 Hz pitch, silence when muted, the audio device accepting playback, and WinUI control sounds being available).
 
-自检还会把 8 个合成音效写到报告旁的 `audio/*.wav`，方便直接试听——仓库里也放了一份在 [docs/sounds](docs/sounds)。
+The self-check also writes the 8 synthesised sounds to `audio/*.wav` next to the report so you can just listen to them — a copy lives in [docs/sounds](docs/sounds).
 
-> 开发机若处于锁屏（Remote Desktop 断开等）会话，`PrintWindow` / `CopyFromScreen` 拿不到窗口像素，因此自检改用应用内 `RenderTargetBitmap` 渲染真实视觉树；Mica 属于合成器背景、不在 XAML 内容里，截图时用近似纯色背景替代。
+> If the dev machine sits in a locked session (RDP disconnected, etc.), `PrintWindow` / `CopyFromScreen` return no window pixels, so the self-check renders the real visual tree through in-app `RenderTargetBitmap` instead. Mica is a compositor backdrop and is not part of the XAML content, so screenshots substitute a near-solid background.
 
-## 设计说明
+## Design notes
 
-- **引擎与界面分离**：`WinMine.Core` 是纯状态机，`BoardView` 只负责把 `CellInfo` 画出来并把鼠标/键盘翻译成 `Reveal`/`ToggleFlag`/`Chord`，因此规则可以脱离 UI 测试。
-- **自绘棋盘**：不用 `GridView`/`Button`，而是继承 `Panel` 手工布置 `CellVisual`（9×9 到 30×40 共 1200 格）——没有控件模板开销，且能精确控制瓷砖圆角、间距、悬停/按下缩放与逐格揭晓动画。
-- **防作弊**：`Minefield.GetCell` 只在失败或该格已揭示时返回 `IsMine`，界面无法通过数据提前得知雷的位置；`BoardView` 另用 `IsMineAt`（内部真值）决定揭示态下的雷图标。
-- **视觉细节**：瓷砖圆角 4、间隙 3（间隙露出棋盘底色，形成网格线）、数字使用 `Segoe UI Variable Display` 半粗体并按经典配色（1 蓝 2 绿 3 红 4 紫 5 棕 6 青 7 黑 8 灰），深色主题重新映射为高对比色。
-- **窗口自适应**：换难度时从 46px 到 18px 逐档试探格子尺寸，取能塞进工作区的最大值后重设窗口客户区并居中。
-- **快捷键不走 `KeyboardAccelerator`**：`KeyboardAccelerator` 挂在根元素上时，WinUI 会在指针悬停该元素（包括整个棋盘）时弹出按键气泡（显示 “F2”）。所以窗口级快捷键改为在根 `Grid` 上挂 `KeyDown`（`handledEventsToo`），自行判断 `F2` / `Ctrl+N` / `Ctrl+1..3`；模态对话框打开期间不响应。
-- **音效分两层**：WinUI 3 确实自带控件音效库 `Microsoft.UI.Xaml.Controls.ElementSoundPlayer` + `Microsoft.UI.Xaml.ElementSoundKind`（Fluent 的 Invoke / Focus / Show / Hide / MoveNext … 语义音，没有“爆炸”“胜利”这种玩法音，且只能选预设音色）。所以按钮、菜单、难度切换交给 `ElementSoundPlayer`，玩法音效则由 `Services/GameSounds.cs` 在启动时合成 PCM 并交给 `winmm!PlaySound(SND_MEMORY | SND_ASYNC)` 播放——零音频资源文件、零 NuGet 依赖，点击延迟只有几十微秒，音块用 `GCHandle` 永久钉住以满足异步读取的生命周期。
+- **Engine and UI are separate**: `WinMine.Core` is a pure state machine; `BoardView` only paints `CellInfo` and translates mouse/keyboard input into `Reveal`/`ToggleFlag`/`Chord`, so the rules can be tested without any UI.
+- **Custom-drawn board**: no `GridView`/`Button` — `BoardView` derives from `Panel` and arranges `CellVisual` instances by hand (9×9 up to 30×40, 1200 cells). That avoids control-template overhead and gives exact control over tile corner radius, spacing, hover/press scaling, and the staggered reveal animation.
+- **Anti-cheat**: `Minefield.GetCell` only reports `IsMine` once the game is lost or that cell is revealed, so the UI cannot learn mine positions from data ahead of time; `BoardView` uses `IsMineAt` (the internal truth) only to decide whether to draw a mine icon on already-revealed cells.
+- **Visual details**: tile corner radius 4, gap 3 (the gap shows the board background, which forms the grid lines), digits in `Segoe UI Variable Display` semibold using the classic palette (1 blue, 2 green, 3 red, 4 purple, 5 brown, 6 cyan, 7 black, 8 grey), remapped to high-contrast colours for the dark theme.
+- **Window fitting**: on a difficulty change the cell size is probed from 46 px down to 18 px, the largest size that fits the work area wins, then the client area is resized and re-centred.
+- **Shortcuts deliberately avoid `KeyboardAccelerator`**: when an accelerator is attached to the root element, WinUI pops a key-tip bubble ("F2") whenever the pointer hovers that element — which means the whole board. Window-level shortcuts therefore hook `KeyDown` on the root `Grid` with `handledEventsToo` and match `F2` / `Ctrl+N` / `Ctrl+1..3` themselves; they stay inert while a modal dialog is open.
+- **Sound has two layers**: WinUI 3 does ship a control-sound library — `Microsoft.UI.Xaml.Controls.ElementSoundPlayer` with `Microsoft.UI.Xaml.ElementSoundKind` (the Fluent semantic sounds Invoke / Focus / Show / Hide / MoveNext …, with no gameplay sounds such as "explode" or "win", and only preset timbres). So buttons, menus and difficulty switches go through `ElementSoundPlayer`, while gameplay sounds are synthesised as PCM by `Services/GameSounds.cs` at startup and handed to `winmm!PlaySound(SND_MEMORY | SND_ASYNC)` — zero audio asset files, zero NuGet dependencies, tens of microseconds of click latency, and the blocks are pinned with `GCHandle` for the lifetime async playback needs.

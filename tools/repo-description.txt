@@ -1,1 +1,1 @@
-用 WinUI 3 / Windows App SDK 复刻的经典扫雷：Fluent Design 界面、自绘棋盘控件、程序化音效、68 项自检
+Classic Minesweeper rebuilt on WinUI 3 / Windows App SDK: Fluent Design UI, custom-drawn board control, runtime-synthesised sound, 68 self-checks.
