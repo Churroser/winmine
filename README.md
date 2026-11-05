@@ -1,5 +1,7 @@
 # 扫雷 · WinMine
 
+简体中文 · [English](README.en.md)
+
 用 **WinUI 3 / Windows App SDK** 复刻的经典扫雷，按 Windows 11 Fluent Design 重做界面：Mica 背景、自定义标题栏、圆角卡片、Segoe Fluent Icons 图标、浅色/深色主题自适应。
 
 ![初级·浅色](docs/screenshots/01-beginner-new-light.png)
@@ -68,6 +70,8 @@ src/WinMine/                 WinUI 3 应用
   Services/UiSounds.cs       WinUI 自带 ElementSoundPlayer 包装（Invoke/MoveNext…）
 tests/WinMine.Core.Tests/    28 个 xunit 测试
 tools/make-icon.ps1          生成 Assets/winmine.png + winmine.ico
+tools/set-repo-meta.ps1      通过 REST API 设置仓库 description / topics
+tools/repo-description.txt   给上面那个脚本读的 UTF-8 描述文案
 ```
 
 ## 验证
