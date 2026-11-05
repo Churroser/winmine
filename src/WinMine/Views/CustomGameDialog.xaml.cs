@@ -1,5 +1,6 @@
-using Microsoft.UI.Xaml.Controls;
+﻿using Microsoft.UI.Xaml.Controls;
 using WinMine.Core;
+using WinMine.Services;
 
 namespace WinMine.Views;
 
@@ -16,6 +17,8 @@ public sealed partial class CustomGameDialog : ContentDialog
     {
         InitializeComponent();
 
+        ApplyLocalization();
+
         RowsBox.Minimum = Minefield.MinRows;
         RowsBox.Maximum = Minefield.MaxRows;
         ColumnsBox.Minimum = Minefield.MinColumns;
@@ -31,6 +34,19 @@ public sealed partial class CustomGameDialog : ContentDialog
 
     /// <summary>The board the player confirmed, or null when the dialog was dismissed.</summary>
     public BoardPreset? Board { get; private set; }
+
+    /// <summary>Pulls every user-visible string from the localized string table.</summary>
+    private void ApplyLocalization()
+    {
+        Title = Loc.T("custom.title");
+        PrimaryButtonText = Loc.T("custom.primary");
+        CloseButtonText = Loc.T("custom.cancel");
+        ColumnsLabel.Text = Loc.T("custom.columns");
+        RowsLabel.Text = Loc.T("custom.rows");
+        MinesLabel.Text = Loc.T("custom.mines");
+        HintText.Text = Loc.T("custom.hint");
+        ValidationBar.Message = Loc.T("custom.invalid");
+    }
 
     private void OnValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
@@ -50,12 +66,12 @@ public sealed partial class CustomGameDialog : ContentDialog
         MinesBox.Maximum = maxMines;
 
         int mines = ReadValue(MinesBox);
-        bool valid = Minefield.IsValid(rows, columns, mines, out string? error);
+        bool valid = Minefield.TryValidate(rows, columns, mines, out BoardValidationError error);
 
         ValidationBar.IsOpen = !valid;
-        if (!valid && !string.IsNullOrEmpty(error))
+        if (!valid)
         {
-            ValidationBar.Message = error;
+            ValidationBar.Message = Loc.DescribeBoardError(error, rows, columns);
         }
 
         IsPrimaryButtonEnabled = valid;
@@ -67,11 +83,11 @@ public sealed partial class CustomGameDialog : ContentDialog
         int columns = ReadValue(ColumnsBox);
         int mines = ReadValue(MinesBox);
 
-        if (!Minefield.IsValid(rows, columns, mines, out string? error))
+        if (!Minefield.TryValidate(rows, columns, mines, out BoardValidationError error))
         {
             args.Cancel = true;
             ValidationBar.IsOpen = true;
-            ValidationBar.Message = error ?? "参数无效";
+            ValidationBar.Message = Loc.DescribeBoardError(error, rows, columns);
             return;
         }
 
@@ -81,3 +97,4 @@ public sealed partial class CustomGameDialog : ContentDialog
     private static int ReadValue(NumberBox box) =>
         double.IsNaN(box.Value) ? (int)box.Minimum : (int)Math.Round(box.Value);
 }
+

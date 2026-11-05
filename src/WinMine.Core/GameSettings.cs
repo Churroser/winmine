@@ -15,6 +15,9 @@ public sealed class GameSettings
 {
     public AppTheme Theme { get; set; } = AppTheme.System;
 
+    /// <summary>UI language; <see cref="AppLanguage.System"/> follows the OS display language.</summary>
+    public AppLanguage Language { get; set; } = AppLanguage.System;
+
     public DifficultyLevel LastDifficulty { get; set; } = DifficultyLevel.Beginner;
 
     public BoardPreset CustomBoard { get; set; } = new(16, 16, 40);
@@ -57,6 +60,11 @@ public sealed class GameSettings
 
             parsed.BestTimes ??= new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             parsed.CustomBoard = SanitizeCustom(parsed.CustomBoard);
+            if (!Enum.IsDefined(parsed.Language))
+            {
+                parsed.Language = AppLanguage.System; // hand-edited or corrupt JSON
+            }
+
             return parsed;
         }
         catch (JsonException)

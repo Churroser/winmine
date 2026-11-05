@@ -104,6 +104,32 @@ public sealed partial class MainWindow
         StartNewGame(BoardPreset.Beginner, DifficultyLevel.Beginner, 20240607);
         await Task.Delay(300);
         await CaptureCustomDialogAsync(Path.Combine(directory, "08-custom-dialog-light.png"));
+
+        // 9–12 · 多语言：同一局面，四种界面语言
+        foreach (var (language, index, theme) in new[]
+                 {
+                     (AppLanguage.Japanese, "09", AppTheme.Light),
+                     (AppLanguage.English, "10", AppTheme.Light),
+                     (AppLanguage.French, "11", AppTheme.Dark),
+                     (AppLanguage.Korean, "12", AppTheme.Light),
+                 })
+        {
+            SetCaptureTheme(theme);
+            CaptureLanguage(language);
+            StartNewGame(BoardPreset.Beginner, DifficultyLevel.Beginner, 20240607);
+            PlayDemo(new Cell(4, 4), seed: 20240607, reveals: 5, flags: 2);
+            await Task.Delay(1400);
+            await SaveShotAsync(Path.Combine(directory, $"{index}-localized-{language.ToString().ToLowerInvariant()}.png"));
+        }
+
+        CaptureLanguage(AppLanguage.ChineseSimplified);
+    }
+
+    /// <summary>Switches the whole window to <paramref name="language"/> for a screenshot.</summary>
+    private void CaptureLanguage(AppLanguage language)
+    {
+        _settings.Language = language;
+        ApplyLanguage();
     }
 
     private async Task CaptureCustomDialogAsync(string path)

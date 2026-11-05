@@ -78,28 +78,47 @@ public sealed class Minefield
         }
     }
 
-    public static bool IsValid(int rows, int columns, int mineCount, out string? error)
+    /// <summary>
+    /// Checks a board definition and reports <em>why</em> it was rejected. The UI localizes the
+    /// message from the code; <see cref="IsValid(int, int, int, out string?)"/> keeps the original
+    /// Chinese text for engine-side use and existing callers.
+    /// </summary>
+    public static bool TryValidate(int rows, int columns, int mineCount, out BoardValidationError error)
     {
-        error = null;
         if (rows is < MinRows or > MaxRows)
         {
-            error = $"行数需要在 {MinRows}–{MaxRows} 之间";
+            error = BoardValidationError.RowsOutOfRange;
             return false;
         }
 
         if (columns is < MinColumns or > MaxColumns)
         {
-            error = $"列数需要在 {MinColumns}–{MaxColumns} 之间";
+            error = BoardValidationError.ColumnsOutOfRange;
             return false;
         }
 
         if (mineCount < 1 || mineCount > rows * columns - 1)
         {
-            error = $"雷数需要在 1–{rows * columns - 1} 之间";
+            error = BoardValidationError.MinesOutOfRange;
             return false;
         }
 
+        error = BoardValidationError.None;
         return true;
+    }
+
+    public static bool IsValid(int rows, int columns, int mineCount, out string? error)
+    {
+        bool valid = TryValidate(rows, columns, mineCount, out BoardValidationError code);
+        error = code switch
+        {
+            BoardValidationError.RowsOutOfRange => $"行数需要在 {MinRows}–{MaxRows} 之间",
+            BoardValidationError.ColumnsOutOfRange => $"列数需要在 {MinColumns}–{MaxColumns} 之间",
+            BoardValidationError.MinesOutOfRange => $"雷数需要在 1–{rows * columns - 1} 之间",
+            _ => null,
+        };
+
+        return valid;
     }
 
     public bool InBounds(Cell cell) =>

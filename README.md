@@ -14,6 +14,10 @@ A faithful rebuild of classic Minesweeper on **WinUI 3 / Windows App SDK**, rest
 | --- | --- | --- |
 | ![](docs/screenshots/05-intermediate-playing-dark.png) | ![](docs/screenshots/06-expert-playing-dark.png) | ![](docs/screenshots/08-custom-dialog-light.png) |
 
+| 日本語 | English | Français | 한국어 |
+| --- | --- | --- | --- |
+| ![](docs/screenshots/09-localized-japanese.png) | ![](docs/screenshots/10-localized-english.png) | ![](docs/screenshots/11-localized-french.png) | ![](docs/screenshots/12-localized-korean.png) |
+
 ## Features
 
 | Area | What it does |
@@ -24,7 +28,8 @@ A faithful rebuild of classic Minesweeper on **WinUI 3 / Windows App SDK**, rest
 | HUD | Mines remaining, timer (0–999 s), face button (click to restart), best time |
 | Appearance | Follows the system theme or an explicit choice; the window sizes itself to the board and re-centres; DWM caption buttons are recoloured to match the theme |
 | Sound | Reveal / flood / flag / unflag / chord / explode / win, all PCM blocks synthesised at runtime; buttons and menus use WinUI's built-in `ElementSoundPlayer`; everything can be muted in Settings |
-| Settings | Appearance (system / light / dark), sound toggle, reset best times, about |
+| Settings | Appearance (system / light / dark), sound toggle, language, reset best times, about |
+| Languages | English, 简体中文, 日本語, Français, 한국어 — the UI starts in the Windows display language and can be pinned in Settings → Language (the choice is remembered, the window title included) |
 
 ## Build and run
 
@@ -57,8 +62,10 @@ src/WinMine.Core/            pure .NET game engine (no UI dependency, unit-testa
   Difficulty.cs              BoardPreset and DifficultyPresets
   BestTimes.cs               best times
   GameSettings.cs            JSON settings model
+  AppLanguage.cs             shipped languages + culture/ISO resolution
+  BoardValidationError.cs    language-neutral board validation result
 src/WinMine/                 WinUI 3 app
-  MainWindow.xaml(.cs)       Fluent layout, title bar, timer, theming, menus
+  MainWindow.xaml(.cs)       Fluent layout, title bar, timer, theming, menus, localization wiring
   MainWindow.Capture.cs      --capture DIR screenshot self-check
   MainWindow.SelfTest.cs     --selftest FILE interaction self-check
   Controls/BoardView.cs      custom-drawn board panel (input, animation, focus ring)
@@ -66,9 +73,10 @@ src/WinMine/                 WinUI 3 app
   Controls/BoardPalette.cs   two-theme palette
   Views/CustomGameDialog.xaml custom board dialog
   Services/SettingsStore.cs  %LOCALAPPDATA%\WinMine\settings.json
+  Services/Localization.cs   five in-code string tables + Loc.T/Loc.F
   Services/GameSounds.cs     runtime-synthesised PCM + winmm PlaySound
   Services/UiSounds.cs       wrapper over WinUI's ElementSoundPlayer (Invoke/MoveNext/…)
-tests/WinMine.Core.Tests/    28 xunit tests
+tests/WinMine.Core.Tests/    54 xunit tests (game rules, settings, language resolution)
 tools/make-icon.ps1          generates Assets/winmine.png + winmine.ico
 tools/set-repo-meta.ps1      sets repo description/topics through the REST API
 tools/repo-description.txt   UTF-8 description text that script feeds to the API
@@ -77,17 +85,17 @@ tools/repo-description.txt   UTF-8 description text that script feeds to the API
 ## Verification
 
 ```powershell
-# Engine unit tests (28)
+# Engine unit tests (54)
 dotnet test tests/WinMine.Core.Tests/WinMine.Core.Tests.csproj
 
 # UI self-check: drives the real window and board control, writes a PASS/FAIL report
 src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --selftest artifacts/selftest.txt
 
-# UI screenshots: renders 8 scripted states to PNG (no visible desktop required)
+# UI screenshots: renders 12 scripted states to PNG (no visible desktop required)
 src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --capture artifacts/shots
 ```
 
-`--selftest` covers 68 checks: first-click safety, flood-fill extent, flag/unflag/reject-flag-on-revealed, chording, the timer actually ticking, auto-flagging plus best time on a win, all mines revealed and further input ignored after a loss, cell counts for all three presets and for custom boards, the window staying inside the work area, settings JSON round-trip, theme switching, the shortcuts plus "no accelerator key-tip source exists anywhere in the visual tree" (a regression guard for the F2 bubble that used to appear when hovering the board), the custom dialog's number-box state (all spin buttons hidden, values clamped), and audio (valid WAV headers, durations, a measured 880 Hz pitch, silence when muted, the audio device accepting playback, and WinUI control sounds being available).
+`--selftest` covers 85 checks: first-click safety, flood-fill extent, flag/unflag/reject-flag-on-revealed, chording, the timer actually ticking, auto-flagging plus best time on a win, all mines revealed and further input ignored after a loss, cell counts for all three presets and for custom boards, the window staying inside the work area, settings JSON round-trip, theme switching, the shortcuts plus "no accelerator key-tip source exists anywhere in the visual tree" (a regression guard for the F2 bubble that used to appear when hovering the board), the custom dialog's number-box state (all spin buttons hidden, values clamped), audio (valid WAV headers, durations, a measured 880 Hz pitch, silence when muted, the audio device accepting playback, and WinUI control sounds being available), and localization (all five tables carry the same keys with no empty entries, placeholders survive translation, `zh-CN`/`zh-TW`/`ja`/`fr-CA`/`ko`/`en-GB`/`de-DE`/invariant all resolve, an explicit choice wins over the OS language, and every surface — window title, title-bar caption, difficulty tabs, board automation name, footer, status line, dialogs and validation text — actually re-renders in the new language).
 
 The self-check also writes the 8 synthesised sounds to `audio/*.wav` next to the report so you can just listen to them — a copy lives in [docs/sounds](docs/sounds).
 
@@ -101,4 +109,5 @@ The self-check also writes the 8 synthesised sounds to `audio/*.wav` next to the
 - **Visual details**: tile corner radius 4, gap 3 (the gap shows the board background, which forms the grid lines), digits in `Segoe UI Variable Display` semibold using the classic palette (1 blue, 2 green, 3 red, 4 purple, 5 brown, 6 cyan, 7 black, 8 grey), remapped to high-contrast colours for the dark theme.
 - **Window fitting**: on a difficulty change the cell size is probed from 46 px down to 18 px, the largest size that fits the work area wins, then the client area is resized and re-centred.
 - **Shortcuts deliberately avoid `KeyboardAccelerator`**: when an accelerator is attached to the root element, WinUI pops a key-tip bubble ("F2") whenever the pointer hovers that element — which means the whole board. Window-level shortcuts therefore hook `KeyDown` on the root `Grid` with `handledEventsToo` and match `F2` / `Ctrl+N` / `Ctrl+1..3` themselves; they stay inert while a modal dialog is open.
+- **Localization without PRI**: an unpackaged app has no package identity, so `ResourceLoader`/`.resw` (and the `MakePri` wiring it needs) is more friction than value. Instead `Services/Localization.cs` holds five complete string tables and exposes `Loc.T(key)` / `Loc.F(key, args)`; `AppLanguage` + `LanguageResolver` in the core library decide the active language (`zh-Hans`, `ja`, `fr`, `ko`, `en`, anything else falls back to English) and `ApplyLocalization()` pushes the strings into the named controls. The core side only returns a language-neutral `BoardValidationError` enum, so validation logic stays testable while the caller localizes the message.
 - **Sound has two layers**: WinUI 3 does ship a control-sound library — `Microsoft.UI.Xaml.Controls.ElementSoundPlayer` with `Microsoft.UI.Xaml.ElementSoundKind` (the Fluent semantic sounds Invoke / Focus / Show / Hide / MoveNext …, with no gameplay sounds such as "explode" or "win", and only preset timbres). So buttons, menus and difficulty switches go through `ElementSoundPlayer`, while gameplay sounds are synthesised as PCM by `Services/GameSounds.cs` at startup and handed to `winmm!PlaySound(SND_MEMORY | SND_ASYNC)` — zero audio asset files, zero NuGet dependencies, tens of microseconds of click latency, and the blocks are pinned with `GCHandle` for the lifetime async playback needs.

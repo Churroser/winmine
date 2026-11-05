@@ -4,6 +4,7 @@ using Microsoft.UI.Composition.SystemBackdrops;
 using Microsoft.UI.Input;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
@@ -41,7 +42,7 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        Title = "扫雷";
+        Title = Loc.T("app.title");
         ConfigureChrome();
 
         RootGrid.Loaded += RootGrid_Loaded;
@@ -107,6 +108,7 @@ public sealed partial class MainWindow : Window
         _bestTimes.Load(_settings.BestTimes);
         ApplyThemeSetting();
         ApplySoundSetting();
+        ApplyLanguage();
 
         _loaded = true;
         var level = _settings.LastDifficulty;
@@ -182,7 +184,7 @@ public sealed partial class MainWindow : Window
                 _timer.Stop();
                 UpdateTimerText(ElapsedSeconds());
                 SetFace(FaceKind.Dead);
-                SetStatus($"踩雷了，用时 {ElapsedSeconds()} 秒", StatusTone.Error);
+                SetStatus(Loc.F("status.exploded", ElapsedSeconds()), StatusTone.Error);
                 break;
             default:
                 SetFace(FaceKind.Smile);
@@ -267,7 +269,7 @@ public sealed partial class MainWindow : Window
         }
 
         SetStatus(
-            record ? $"新纪录！{seconds} 秒" : $"通关！用时 {seconds} 秒",
+            record ? Loc.F("status.newRecord", seconds) : Loc.F("status.won", seconds),
             StatusTone.Success);
     }
 
@@ -293,14 +295,14 @@ public sealed partial class MainWindow : Window
     {
         if (_difficulty == DifficultyLevel.Custom)
         {
-            BestTimeText.Text = "自定义棋盘 · 不计入最佳成绩";
+            BestTimeText.Text = Loc.T("footer.customNoBest");
             return;
         }
 
         var best = _bestTimes.Get(_difficulty);
         BestTimeText.Text = best is null
-            ? $"{DifficultyPresets.DisplayName(_difficulty)} · 尚无最佳成绩"
-            : $"{DifficultyPresets.DisplayName(_difficulty)} · 最佳 {best} 秒";
+            ? Loc.F("footer.noBest", Loc.DifficultyName(_difficulty))
+            : Loc.F("footer.best", Loc.DifficultyName(_difficulty), best);
     }
 
     private void SetFace(FaceKind face)
@@ -403,6 +405,53 @@ public sealed partial class MainWindow : Window
     }
 
     // ── 主题与标题栏配色 ────────────────────────────────────────────────────────
+
+    // ── 语言 ────────────────────────────────────────────────────────────────────
+
+    /// <summary>Resolves the persisted preference (System → OS display language) and renders it.</summary>
+    private void ApplyLanguage()
+    {
+        Loc.SetLanguage(LanguageResolver.Resolve(_settings.Language));
+        ApplyLocalization();
+    }
+
+    /// <summary>Pushes every localized string into the live visual tree.</summary>
+    private void ApplyLocalization()
+    {
+        Title = Loc.T("app.title");
+        TitleText.Text = Loc.T("app.title");
+
+        ItemBeginner.Text = Loc.T("difficulty.beginner");
+        ItemIntermediate.Text = Loc.T("difficulty.intermediate");
+        ItemExpert.Text = Loc.T("difficulty.expert");
+        ItemCustom.Text = Loc.T("difficulty.custom");
+
+        ToolTipService.SetToolTip(NewGameButton, Loc.T("button.newGame"));
+        AutomationProperties.SetName(NewGameButton, Loc.T("button.newGame"));
+        ToolTipService.SetToolTip(SettingsButton, Loc.T("button.settings"));
+        AutomationProperties.SetName(SettingsButton, Loc.T("button.settings"));
+        ToolTipService.SetToolTip(ResetButton, Loc.T("button.restart"));
+        AutomationProperties.SetName(ResetButton, Loc.T("button.restart"));
+        AutomationProperties.SetName(Board, Loc.T("board.name"));
+
+        UpdateBestTimeText();
+    }
+
+    /// <summary>Applies a language picked in the settings menu and remembers the choice.</summary>
+    private void SetLanguage(AppLanguage language)
+    {
+        if (_settings.Language == language)
+        {
+            return;
+        }
+
+        _settings.Language = language;
+        ApplyLanguage();
+        SetStatus(string.Empty, StatusTone.Neutral);
+        FitWindowToBoard();
+        UiSounds.Play(ElementSoundKind.Invoke);
+        SaveSettings();
+    }
 
     /// <summary>Pushes the persisted mute flag into both audio layers.</summary>
     private void ApplySoundSetting()
@@ -519,17 +568,17 @@ public sealed partial class MainWindow : Window
 
         var flyout = new MenuFlyout();
 
-        var appearance = new MenuFlyoutSubItem { Text = "外观" };
-        foreach (var (theme, label) in new[]
+        var appearance = new MenuFlyoutSubItem { Text = Loc.T("menu.appearance") };
+        foreach (var (theme, labelKey) in new[]
                  {
-                     (AppTheme.System, "跟随系统"),
-                     (AppTheme.Light, "浅色"),
-                     (AppTheme.Dark, "深色"),
+                     (AppTheme.System, "menu.themeSystem"),
+                     (AppTheme.Light, "menu.themeLight"),
+                     (AppTheme.Dark, "menu.themeDark"),
                  })
         {
             var item = new RadioMenuFlyoutItem
             {
-                Text = label,
+                Text = Loc.T(labelKey),
                 GroupName = "AppTheme",
                 IsChecked = _settings.Theme == theme,
             };
@@ -550,9 +599,34 @@ public sealed partial class MainWindow : Window
 
         flyout.Items.Add(appearance);
 
+        var language = new MenuFlyoutSubItem { Text = Loc.T("menu.language") };
+        var automatic = new RadioMenuFlyoutItem
+        {
+            Text = Loc.T("menu.languageSystem"),
+            GroupName = "AppLanguage",
+            IsChecked = _settings.Language == AppLanguage.System,
+        };
+        automatic.Click += (_, _) => SetLanguage(AppLanguage.System);
+        language.Items.Add(automatic);
+        language.Items.Add(new MenuFlyoutSeparator());
+
+        foreach (var candidate in LanguageResolver.Supported)
+        {
+            var item = new RadioMenuFlyoutItem
+            {
+                Text = LanguageResolver.NativeName(candidate),
+                GroupName = "AppLanguage",
+                IsChecked = _settings.Language == candidate,
+            };
+            item.Click += (_, _) => SetLanguage(candidate);
+            language.Items.Add(item);
+        }
+
+        flyout.Items.Add(language);
+
         var sound = new ToggleMenuFlyoutItem
         {
-            Text = "音效",
+            Text = Loc.T("menu.sound"),
             IsChecked = _settings.SoundEnabled,
         };
         sound.Click += (_, _) =>
@@ -567,11 +641,11 @@ public sealed partial class MainWindow : Window
 
         flyout.Items.Add(new MenuFlyoutSeparator());
 
-        var reset = new MenuFlyoutItem { Text = "重置最佳成绩" };
+        var reset = new MenuFlyoutItem { Text = Loc.T("menu.resetBestTimes") };
         reset.Click += async (_, _) => await ConfirmResetBestTimesAsync();
         flyout.Items.Add(reset);
 
-        var about = new MenuFlyoutItem { Text = "关于扫雷" };
+        var about = new MenuFlyoutItem { Text = Loc.T("menu.about") };
         about.Click += async (_, _) => await ShowAboutAsync();
         flyout.Items.Add(about);
 
@@ -583,10 +657,10 @@ public sealed partial class MainWindow : Window
         var dialog = new ContentDialog
         {
             XamlRoot = RootGrid.XamlRoot,
-            Title = "重置最佳成绩",
-            Content = "所有难度的最佳成绩都会被清除，此操作无法撤销。",
-            PrimaryButtonText = "重置",
-            CloseButtonText = "取消",
+            Title = Loc.T("dialog.reset.title"),
+            Content = Loc.T("dialog.reset.body"),
+            PrimaryButtonText = Loc.T("dialog.reset.primary"),
+            CloseButtonText = Loc.T("action.cancel"),
             DefaultButton = ContentDialogButton.Close,
         };
 
@@ -609,7 +683,7 @@ public sealed partial class MainWindow : Window
         _bestTimes.Clear();
         PersistBestTimes();
         UpdateBestTimeText();
-        SetStatus("最佳成绩已重置", StatusTone.Neutral);
+        SetStatus(Loc.T("status.bestCleared"), StatusTone.Neutral);
     }
 
     private async Task ShowAboutAsync()
@@ -617,27 +691,27 @@ public sealed partial class MainWindow : Window
         var dialog = new ContentDialog
         {
             XamlRoot = RootGrid.XamlRoot,
-            Title = "扫雷",
+            Title = Loc.T("app.title"),
             Content = new StackPanel
             {
                 Spacing = 6,
                 Children =
                 {
-                    new TextBlock { Text = "经典扫雷 · WinUI 3 / Fluent Design 复刻", TextWrapping = TextWrapping.Wrap },
+                    new TextBlock { Text = Loc.T("dialog.about.tagline"), TextWrapping = TextWrapping.Wrap },
                     new TextBlock
                     {
-                        Text = "左键翻开 · 右键插旗 · 中键或再次点击数字快速展开 · 方向键 + 空格",
+                        Text = Loc.T("dialog.about.controls"),
                         TextWrapping = TextWrapping.Wrap,
                         Foreground = SecondaryBrush(),
                     },
                     new TextBlock
                     {
-                        Text = "版本 1.0.0",
+                        Text = Loc.F("dialog.about.version", "1.0.0"),
                         Foreground = SecondaryBrush(),
                     },
                 },
             },
-            CloseButtonText = "关闭",
+            CloseButtonText = Loc.T("action.close"),
         };
 
         _modalOpen = true;

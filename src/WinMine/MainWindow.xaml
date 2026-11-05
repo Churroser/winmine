@@ -18,7 +18,8 @@
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" IsHitTestVisible="False">
                 <Image Source="Assets/winmine.png" Width="16" Height="16" />
                 <TextBlock
-                    Text="扫雷"
+                    x:Name="TitleText"
+                    Text="Minesweeper"
                     FontSize="12"
                     VerticalAlignment="Center"
                     Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
@@ -37,10 +38,10 @@
                     </Grid.ColumnDefinitions>
 
                     <SelectorBar x:Name="DifficultyBar" SelectionChanged="DifficultyBar_SelectionChanged" VerticalAlignment="Center">
-                        <SelectorBarItem x:Name="ItemBeginner" Text="初级" />
-                        <SelectorBarItem x:Name="ItemIntermediate" Text="中级" />
-                        <SelectorBarItem x:Name="ItemExpert" Text="高级" />
-                        <SelectorBarItem x:Name="ItemCustom" Text="自定义" />
+                        <SelectorBarItem x:Name="ItemBeginner" Text="Beginner" />
+                        <SelectorBarItem x:Name="ItemIntermediate" Text="Intermediate" />
+                        <SelectorBarItem x:Name="ItemExpert" Text="Expert" />
+                        <SelectorBarItem x:Name="ItemCustom" Text="Custom" />
                     </SelectorBar>
 
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
@@ -48,16 +49,16 @@
                             x:Name="NewGameButton"
                             Style="{StaticResource IconToolbarButtonStyle}"
                             Click="NewGameButton_Click"
-                            ToolTipService.ToolTip="新游戏 (F2)"
-                            AutomationProperties.Name="新游戏">
+                            ToolTipService.ToolTip="New game (F2)"
+                            AutomationProperties.Name="New game">
                             <FontIcon Glyph="&#xE72C;" FontSize="15" />
                         </Button>
                         <Button
                             x:Name="SettingsButton"
                             Style="{StaticResource IconToolbarButtonStyle}"
                             Click="SettingsButton_Click"
-                            ToolTipService.ToolTip="设置"
-                            AutomationProperties.Name="设置">
+                            ToolTipService.ToolTip="Settings"
+                            AutomationProperties.Name="Settings">
                             <FontIcon Glyph="&#xE713;" FontSize="15" />
                         </Button>
                     </StackPanel>
@@ -85,8 +86,8 @@
                             Padding="0"
                             CornerRadius="21"
                             Click="ResetButton_Click"
-                            ToolTipService.ToolTip="重新开始 (F2)"
-                            AutomationProperties.Name="重新开始">
+                            ToolTipService.ToolTip="Restart (F2)"
+                            AutomationProperties.Name="Restart">
                             <TextBlock
                                 x:Name="FaceText"
                                 Text="🙂"
@@ -105,7 +106,7 @@
 
                 <!-- 棋盘 -->
                 <Border x:Name="BoardCard" Style="{StaticResource CardBorderStyle}">
-                    <controls:BoardView x:Name="Board" AutomationProperties.Name="扫雷棋盘" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <controls:BoardView x:Name="Board" AutomationProperties.Name="Minesweeper board" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
 
                 <!-- 页脚：最佳成绩 + 状态 -->

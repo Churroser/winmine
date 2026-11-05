@@ -20,7 +20,7 @@
             </Grid.ColumnDefinitions>
 
             <StackPanel Spacing="6">
-                <TextBlock Text="列数（宽）" Style="{StaticResource CaptionTextBlockStyle}" />
+                <TextBlock x:Name="ColumnsLabel" Text="列数（宽）" Style="{StaticResource CaptionTextBlockStyle}" />
                 <NumberBox
                     x:Name="ColumnsBox"
                     MinWidth="140"
@@ -31,7 +31,7 @@
             </StackPanel>
 
             <StackPanel Grid.Column="1" Spacing="6">
-                <TextBlock Text="行数（高）" Style="{StaticResource CaptionTextBlockStyle}" />
+                <TextBlock x:Name="RowsLabel" Text="行数（高）" Style="{StaticResource CaptionTextBlockStyle}" />
                 <NumberBox
                     x:Name="RowsBox"
                     MinWidth="140"
@@ -43,7 +43,7 @@
         </Grid>
 
         <StackPanel Spacing="6">
-            <TextBlock Text="雷数" Style="{StaticResource CaptionTextBlockStyle}" />
+            <TextBlock x:Name="MinesLabel" Text="雷数" Style="{StaticResource CaptionTextBlockStyle}" />
             <NumberBox
                 x:Name="MinesBox"
                 MinWidth="140"
@@ -61,6 +61,7 @@
             Message="参数无效" />
 
         <TextBlock
+            x:Name="HintText"
             Text="提示：列 3–40，行 3–30，雷数最多为格子总数减一；第一次点击永远不会踩雷。"
             TextWrapping="Wrap"
             Style="{StaticResource CaptionTextBlockStyle}" />

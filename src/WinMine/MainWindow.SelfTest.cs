@@ -1,7 +1,9 @@
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using System.Globalization;
 using Windows.System;
 using WinMine.Core;
 using WinMine.Services;
@@ -142,9 +144,10 @@ public sealed partial class MainWindow
             Check("胜利后自动为全部雷插旗", board.FlagCount == board.MineCount, $"flags={board.FlagCount}/{board.MineCount}");
             Check("胜利后计数板归零", MineCounterText.Text == "000", MineCounterText.Text);
             Check("胜利表情为墨镜", FaceText.Text == "😎", FaceText.Text);
-            Check("胜利状态文案正确", StatusText.Text.Contains("通关", StringComparison.Ordinal)
-                || StatusText.Text.Contains("新纪录", StringComparison.Ordinal), StatusText.Text);
-            Check("胜利后记录最佳成绩", BestTimeText.Text.Contains("最佳", StringComparison.Ordinal), BestTimeText.Text);
+            Check("胜利状态文案正确", StatusText.Text.StartsWith(LocPrefix("status.won"), StringComparison.Ordinal)
+                || StatusText.Text.StartsWith(LocPrefix("status.newRecord"), StringComparison.Ordinal), StatusText.Text);
+            Check("胜利后记录最佳成绩", BestTimeText.Text.StartsWith(LocPrefix("footer.best"), StringComparison.Ordinal)
+                || BestTimeText.Text.Contains(Loc.T("footer.noBest").Split(' ')[^1], StringComparison.Ordinal), BestTimeText.Text);
 
             // ── 7 · 失败流程 ────────────────────────────────────────────────────
             StartNewGame(BoardPreset.Beginner, DifficultyLevel.Beginner, 4242);
@@ -158,7 +161,7 @@ public sealed partial class MainWindow
             Check("踩雷后判定失败", board.Status == GameStatus.Lost, board.Status.ToString());
             Check("失败后揭示全部地雷", board.MinePositions().All(m => board.GetCell(m).IsRevealed), "mines revealed");
             Check("失败表情为晕眩", FaceText.Text == "😵", FaceText.Text);
-            Check("失败状态文案正确", StatusText.Text.Contains("踩雷", StringComparison.Ordinal), StatusText.Text);
+            Check("失败状态文案正确", StatusText.Text.StartsWith(LocPrefix("status.exploded"), StringComparison.Ordinal), StatusText.Text);
             Check("失败后棋盘拒绝继续操作", board.ToggleFlag(new Cell(0, 0)).Accepted == false, "ToggleFlag");
 
             // ── 8 · 难度切换与窗口自适应 ────────────────────────────────────────
@@ -190,7 +193,7 @@ public sealed partial class MainWindow
             StartNewGame(new BoardPreset(12, 20, 45), DifficultyLevel.Custom, 5);
             await Task.Delay(80);
             Check("自定义棋盘生效", Board.CellControlCount == 240, $"count={Board.CellControlCount}");
-            Check("自定义棋盘不计最佳成绩", BestTimeText.Text.Contains("不计入", StringComparison.Ordinal), BestTimeText.Text);
+            Check("自定义棋盘不计最佳成绩", BestTimeText.Text == Loc.T("footer.customNoBest"), BestTimeText.Text);
 
             // ── 10 · 设置持久化 ────────────────────────────────────────────────
             var settings = new GameSettings { Theme = AppTheme.Dark, LastDifficulty = DifficultyLevel.Expert };
@@ -294,6 +297,139 @@ public sealed partial class MainWindow
             UiSounds.Play(ElementSoundKind.Invoke);
             UiSounds.Enabled = true;
             Check("静音时控件音效安全跳过", UiSounds.Available, "ok");
+
+            // ── 15 · 多语言（简体中文 / English / 日本語 / Français / 한국어）────
+            var languages = LanguageResolver.Supported.ToArray();
+            var referenceKeys = Loc.Table(AppLanguage.English).Keys.OrderBy(key => key, StringComparer.Ordinal).ToArray();
+            bool sameKeySets = languages.All(language =>
+            {
+                var keys = Loc.Table(language).Keys.OrderBy(key => key, StringComparer.Ordinal).ToArray();
+                return keys.Length == referenceKeys.Length && keys.SequenceEqual(referenceKeys);
+            });
+            Check("五种语言的字符串表键集完全一致", sameKeySets,
+                $"keys={referenceKeys.Length} languages={languages.Length}");
+
+            var emptyValues = languages
+                .Where(language => Loc.Table(language).Values.Any(string.IsNullOrWhiteSpace))
+                .Select(LanguageResolver.Tag)
+                .ToArray();
+            Check("字符串表没有空值", emptyValues.Length == 0, string.Join(",", emptyValues));
+
+            var placeholderIssues = new List<string>();
+            foreach (string key in referenceKeys)
+            {
+                string[] expected = Placeholders(Loc.Table(AppLanguage.English)[key]);
+                if (expected.Length == 0)
+                {
+                    continue;
+                }
+
+                foreach (var language in languages)
+                {
+                    if (!expected.SequenceEqual(Placeholders(Loc.Table(language)[key])))
+                    {
+                        placeholderIssues.Add($"{LanguageResolver.Tag(language)}:{key}");
+                    }
+                }
+            }
+
+            Check("每种语言的格式占位符保持一致", placeholderIssues.Count == 0,
+                string.Join(",", placeholderIssues.Take(4)));
+
+            Check("系统语言映射：zh / zh-TW → 简体中文",
+                LanguageResolver.FromCulture(new CultureInfo("zh-CN")) == AppLanguage.ChineseSimplified
+                && LanguageResolver.FromCulture(new CultureInfo("zh-TW")) == AppLanguage.ChineseSimplified
+                && LanguageResolver.FromCulture(new CultureInfo("zh-Hans-CN")) == AppLanguage.ChineseSimplified,
+                $"{LanguageResolver.FromCulture(new CultureInfo("zh-TW"))}");
+            Check("系统语言映射：ja / fr-CA / ko / en-GB",
+                LanguageResolver.FromCulture(new CultureInfo("ja-JP")) == AppLanguage.Japanese
+                && LanguageResolver.FromCulture(new CultureInfo("fr-CA")) == AppLanguage.French
+                && LanguageResolver.FromCulture(new CultureInfo("ko-KR")) == AppLanguage.Korean
+                && LanguageResolver.FromCulture(new CultureInfo("en-GB")) == AppLanguage.English,
+                "ja/fr/ko/en");
+            Check("没有对应语言表时回退到英语",
+                LanguageResolver.FromCulture(new CultureInfo("de-DE")) == AppLanguage.English
+                && LanguageResolver.FromCulture(CultureInfo.InvariantCulture) == AppLanguage.English,
+                $"{LanguageResolver.FromCulture(new CultureInfo("de-DE"))}");
+            Check("跟随系统时解析成具体语言",
+                LanguageResolver.Resolve(AppLanguage.System, new CultureInfo("ja-JP")) == AppLanguage.Japanese,
+                "System + ja-JP");
+            Check("手动选择优先于系统语言",
+                LanguageResolver.Resolve(AppLanguage.French, new CultureInfo("ja-JP")) == AppLanguage.French,
+                "French + ja-JP");
+
+            var seenLabels = new HashSet<string>(StringComparer.Ordinal);
+            bool appliedEverywhere = true;
+            foreach (var language in languages)
+            {
+                CaptureLanguage(language);
+                await Task.Delay(40);
+                appliedEverywhere &= TitleText.Text == Loc.T("app.title")
+                    && Title == Loc.T("app.title")
+                    && ItemBeginner.Text == Loc.T("difficulty.beginner")
+                    && ItemCustom.Text == Loc.T("difficulty.custom")
+                    && AutomationProperties.GetName(Board) == Loc.T("board.name");
+                seenLabels.Add(ItemBeginner.Text);
+            }
+
+            Check("切换语言后标题、难度项、棋盘名称立即更新", appliedEverywhere,
+                string.Join(" / ", seenLabels));
+            Check("五种语言的难度名称互不相同", seenLabels.Count == languages.Length,
+                string.Join(" / ", seenLabels.Take(3)));
+
+            CaptureLanguage(AppLanguage.Japanese);
+            StartNewGame(BoardPreset.Beginner, DifficultyLevel.Beginner, 424242);
+            await Task.Delay(60);
+            Check("页脚使用当前语言", BestTimeText.Text.StartsWith(Loc.T("difficulty.beginner"), StringComparison.Ordinal),
+                BestTimeText.Text);
+
+            Board.RevealAt(new Cell(4, 4));
+            await Task.Delay(60);
+            var losingMine = FirstMine();
+            if (losingMine is { } boom)
+            {
+                Board.RevealAt(boom);
+            }
+
+            await Task.Delay(80);
+            Check("失败提示使用当前语言",
+                StatusText.Text == Loc.F("status.exploded", ElapsedSeconds()),
+                StatusText.Text);
+
+            // Localized dialogs re-read the table on construction.
+            var localizedDialog = new Views.CustomGameDialog(new BoardPreset(16, 16, 40));
+            Check("自定义棋盘对话框标题/按钮本地化",
+                localizedDialog.Title as string == Loc.T("custom.title")
+                && localizedDialog.PrimaryButtonText == Loc.T("custom.primary")
+                && localizedDialog.CloseButtonText == Loc.T("custom.cancel"),
+                $"{localizedDialog.Title} / {localizedDialog.PrimaryButtonText}");
+
+            // The NumberBoxes clamp whatever the user types, so an invalid state is hard to reach
+            // through the UI; verify the localized wording of a rejected board directly instead.
+            string localizedMineError = Loc.DescribeBoardError(BoardValidationError.MinesOutOfRange, 16, 16);
+            string localizedRowError = Loc.DescribeBoardError(BoardValidationError.RowsOutOfRange, 16, 16);
+            Check("非法参数的提示已本地化",
+                localizedMineError == Loc.F("error.mines", (16 * 16) - 1)
+                && localizedRowError == Loc.F("error.rows", Minefield.MinRows, Minefield.MaxRows)
+                && localizedMineError != Loc.Table(AppLanguage.English)["error.mines"].Replace("{0}", ((16 * 16) - 1).ToString()),
+                localizedMineError);
+
+            if (localizedDialog.FindName("HintText") is TextBlock hint
+                && localizedDialog.FindName("ColumnsLabel") is TextBlock columnsLabel)
+            {
+                Check("对话框标签与提示已本地化",
+                    hint.Text == Loc.T("custom.hint") && columnsLabel.Text == Loc.T("custom.columns"),
+                    hint.Text[..Math.Min(18, hint.Text.Length)]);
+            }
+
+            var settingsRoundTrip = GameSettings.FromJson(new GameSettings { Language = AppLanguage.Korean }.ToJson());
+            Check("语言偏好能持久化", settingsRoundTrip.Language == AppLanguage.Korean,
+                settingsRoundTrip.Language.ToString());
+            Check("语言以可读形式写入 JSON", new GameSettings { Language = AppLanguage.French }.ToJson().Contains("\"French\"", StringComparison.Ordinal),
+                "French");
+
+            CaptureLanguage(AppLanguage.ChineseSimplified);
+            StartNewGame(BoardPreset.Beginner, DifficultyLevel.Beginner, 20240607);
         }
         catch (Exception ex)
         {
@@ -329,6 +465,22 @@ public sealed partial class MainWindow
 
         await Task.Delay(150);
         Application.Current.Exit();
+    }
+
+    /// <summary>Distinct <c>{0}</c>-style format items of a template, sorted so tables can be compared.</summary>
+    private static string[] Placeholders(string template) =>
+        System.Text.RegularExpressions.Regex.Matches(template, @"\{\d+\}")
+            .Select(match => match.Value)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(value => value, StringComparer.Ordinal)
+            .ToArray();
+
+    /// <summary>Template text before its first placeholder — lets checks stay language-neutral.</summary>
+    private static string LocPrefix(string key)
+    {
+        string template = Loc.T(key);
+        int placeholder = template.IndexOf('{', StringComparison.Ordinal);
+        return placeholder < 0 ? template : template[..placeholder];
     }
 
     private static int CountAcceleratorHosts(DependencyObject node)
