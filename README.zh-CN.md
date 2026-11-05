@@ -18,6 +18,25 @@
 | --- | --- | --- | --- |
 | ![](docs/screenshots/zh/09-localized-japanese.png) | ![](docs/screenshots/zh/10-localized-english.png) | ![](docs/screenshots/zh/11-localized-french.png) | ![](docs/screenshots/zh/12-localized-korean.png) |
 
+## 下载安装
+
+最新版本在 [Releases](https://github.com/Churroser/winmine/releases/latest) 页面：
+
+| 文件 | 是什么 | 前置条件 |
+| --- | --- | --- |
+| `WinMine-1.1.0-win-x64.zip` | 便携版：解压到任意目录，双击 `WinMine.exe` | 无（自包含：.NET 与 Windows App SDK 都在包里） |
+| `WinMine-1.1.0-x64.msix` | 安装包：开始菜单项 + `WinMine.exe` 命令别名 | 需先信任随包的证书，见下 |
+| `WinMine-msix-selfsigned.cer` | 给 MSIX 签名用的自签代码签名证书 | — |
+
+MSIX 用的是自签证书（这里没有付费代码签名证书），所以 Windows 会在安装前提示。用**管理员** PowerShell 信任一次即可：
+
+```powershell
+certutil -addstore Root WinMine-msix-selfsigned.cer   # 信任证书（仅一次）
+Add-AppxPackage .\WinMine-1.1.0-x64.msix              # 安装
+```
+
+包是自包含的，安装时**不会**再拉取 .NET 或 Windows App SDK 运行时。卸载用 `Remove-AppxPackage Churroser.WinMine` 或“设置 → 应用”。完全不想碰证书库的话，直接用 ZIP。
+
 ## 功能
 
 | 分类 | 内容 |
@@ -78,8 +97,12 @@ src/WinMine/                 WinUI 3 应用
   Services/UiSounds.cs       WinUI 自带 ElementSoundPlayer 包装（Invoke/MoveNext…）
 tests/WinMine.Core.Tests/    54 个 xunit 测试（规则、设置、语言解析）
 tools/make-icon.ps1          生成 Assets/winmine.png + winmine.ico
+tools/make-package-assets.ps1  从图标派生 MSIX 需要的磁贴/启动图 PNG
+tools/make-msix.ps1          构建、打包、签名 MSIX（并输出便携 ZIP）；-TestInstall 会实测安装
 tools/set-repo-meta.ps1      通过 REST API 设置仓库 description / topics
 tools/repo-description.txt   给上面那个脚本读的 UTF-8 描述文案
+packaging/AppxManifest.xml   MSIX 身份、磁贴资源、命令别名、runFullTrust 能力
+packaging/Assets/            StoreLogo / Square44x44Logo / Square150x150Logo / Wide310x150Logo / SplashScreen
 ```
 
 ## 验证

@@ -18,6 +18,25 @@ A faithful rebuild of classic Minesweeper on **WinUI 3 / Windows App SDK**, rest
 | --- | --- | --- | --- |
 | ![](docs/screenshots/en/09-localized-japanese.png) | ![](docs/screenshots/en/10-localized-chinese.png) | ![](docs/screenshots/en/11-localized-french.png) | ![](docs/screenshots/en/12-localized-korean.png) |
 
+## Download
+
+The latest build is on the [Releases](https://github.com/Churroser/winmine/releases/latest) page:
+
+| Asset | What it is | Prerequisites |
+| --- | --- | --- |
+| `WinMine-1.1.0-win-x64.zip` | Portable folder — unzip anywhere and run `WinMine.exe` | none (self-contained: .NET and the Windows App SDK are bundled) |
+| `WinMine-1.1.0-x64.msix` | Installed app: Start-menu entry plus a `WinMine.exe` command alias | the bundled certificate must be trusted once, see below |
+| `WinMine-msix-selfsigned.cer` | The self-signed code-signing certificate the MSIX is signed with | — |
+
+The MSIX is signed with a self-signed certificate, so Windows asks you to trust it first. In an **elevated** PowerShell:
+
+```powershell
+certutil -addstore Root WinMine-msix-selfsigned.cer   # trust the certificate (once)
+Add-AppxPackage .\WinMine-1.1.0-x64.msix              # install
+```
+
+The package is self-contained, so installing it does **not** pull in .NET or the Windows App SDK runtime. Remove it with `Remove-AppxPackage Churroser.WinMine` or from Settings → Apps. If you would rather not touch the certificate store at all, use the ZIP.
+
 ## Features
 
 | Area | What it does |
@@ -78,8 +97,12 @@ src/WinMine/                 WinUI 3 app
   Services/UiSounds.cs       wrapper over WinUI's ElementSoundPlayer (Invoke/MoveNext/…)
 tests/WinMine.Core.Tests/    54 xunit tests (game rules, settings, language resolution)
 tools/make-icon.ps1          generates Assets/winmine.png + winmine.ico
+tools/make-package-assets.ps1  derives the MSIX tile/splash PNGs from the icon
+tools/make-msix.ps1          builds, packs, signs the MSIX (+ portable ZIP); -TestInstall smoke-tests it
 tools/set-repo-meta.ps1      sets repo description/topics through the REST API
 tools/repo-description.txt   UTF-8 description text that script feeds to the API
+packaging/AppxManifest.xml   MSIX identity, tile assets, execution alias, runFullTrust capability
+packaging/Assets/            StoreLogo / Square44x44Logo / Square150x150Logo / Wide310x150Logo / SplashScreen
 ```
 
 ## Verification

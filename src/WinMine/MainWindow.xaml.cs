@@ -686,6 +686,15 @@ public sealed partial class MainWindow : Window
         SetStatus(Loc.T("status.bestCleared"), StatusTone.Neutral);
     }
 
+    private static string AppVersion
+    {
+        get
+        {
+            Version? version = typeof(App).Assembly.GetName().Version;
+            return version is null ? "1.0.0" : $"{version.Major}.{version.Minor}.{version.Build}";
+        }
+    }
+
     private async Task ShowAboutAsync()
     {
         var dialog = new ContentDialog
@@ -706,7 +715,7 @@ public sealed partial class MainWindow : Window
                     },
                     new TextBlock
                     {
-                        Text = Loc.F("dialog.about.version", "1.0.0"),
+                        Text = Loc.F("dialog.about.version", AppVersion),
                         Foreground = SecondaryBrush(),
                     },
                 },
