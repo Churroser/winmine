@@ -31,11 +31,51 @@
 MSIX 用的是自签证书（这里没有付费代码签名证书），所以 Windows 会在安装前提示。用**管理员** PowerShell 信任一次即可：
 
 ```powershell
-certutil -addstore Root WinMine-msix-selfsigned.cer   # 信任证书（仅一次）
+Import-Certificate -FilePath .\WinMine-msix-selfsigned.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople
 Add-AppxPackage .\WinMine-1.1.0-x64.msix              # 安装
 ```
 
+装证书要进**受信任人（TrustedPeople）**，这是 AppX 真正校验签名证书的库；同时签名链必须能落到一个受信任的根，所以只能写机器级库——往 `Cert:\CurrentUser\TrustedPeople` 里导入（非管理员）仍然会报 `0x800B0109：应用包或捆绑包中的签名的根证书必须是受信任的证书`。图形界面的等价操作：双击 `.cer` → **安装证书** → **本地计算机** → **将所有证书放入下列存储** → **受信任人**。
+
+只有导入过这张证书的机器才能装用它签的包，而且谁拿到配套私钥，就能签出那些机器都会信任的任何包——`.pfx` 按机密对待。批量部署可以走 Intune/GPO（计算机配置 → 策略 → Windows 设置 → 安全设置 → 公钥策略 → 受信任的发布者），或者在部署脚本里 `certutil -addstore TrustedPeople <cer>`。
+
 包是自包含的，安装时**不会**再拉取 .NET 或 Windows App SDK 运行时。卸载用 `Remove-AppxPackage Churroser.WinMine` 或“设置 → 应用”。完全不想碰证书库的话，直接用 ZIP。
+
+### 换成正式证书签名
+
+自签证书只适合本地测试。正式分发时，Windows 必须能把你的签名链到一个它本来就信任的根：
+
+| 路线 | 成本 | 说明 |
+| --- | --- | --- |
+| **Azure Artifact Signing**（原 Trusted Signing） | 约 $10/月 | 微软托管的云签名服务，证书约 3 天有效期、自动续签并时间戳到 `timestamp.acs.microsoft.com`；SmartScreen 信誉绑在已验证的发布者身份上。资格：美国/加拿大/欧盟/英国的组织且可验证纳税历史满 3 年，或美国/加拿大的个人开发者 |
+| **OV / EV 代码签名证书**（DigiCert、Sectigo、GlobalSign、SSL.com、Certum…） | $300–500/年 | 根证书本来就在 Windows 信任列表里。2023 年 6 月起私钥必须在 FIPS 140-2 硬件令牌或 HSM 上，不再给 `.pfx`，改用 `signtool sign /sha1 <指纹>` 对着令牌签 |
+| **Microsoft Store** | 免费（商店代签） | 把 MSIX 传到 Partner Center，商店会重新签名，你自己完全不需要证书。清单里的 `Identity/@Publisher` 必须等于 Partner Center 分配的标识（`CN=XXXXXXXX-…`） |
+
+拿到证书后，清单里的 Publisher 和证书 Subject 必须逐字节一致：
+
+```powershell
+# 清单现在写的是
+Select-String packaging\AppxManifest.xml -Pattern 'Publisher='
+
+# 证书实际是什么（pfx，或已装进 CurrentUser\My 的令牌证书）
+(Get-PfxCertificate .\mycert.pfx).Subject
+```
+
+然后用 `tools\make-msix.ps1` 重打包并签名——两种证书都支持，且永远会打时间戳，证书过期后包仍然可安装：
+
+```powershell
+powershell -File tools\make-msix.ps1 -SkipBuild -CertificateThumbprint <指纹>   # 令牌上的 OV/EV 证书
+powershell -File tools\make-msix.ps1 -SkipBuild -CertificatePath .\mycert.pfx    # pfx 文件
+```
+
+走 Azure Artifact Signing 时 SignTool 需要它的 dlib 插件（`winget install -e --id Microsoft.Azure.ArtifactSigningClientTools`），签名命令是：
+
+```powershell
+signtool sign /fd SHA256 /tr http://timestamp.acs.microsoft.com /td SHA256 `
+  /dlib "<dlib>\x64\Azure.CodeSigning.Dlib.dll" /dmdf metadata.json WinMine-1.1.0-x64.msix
+```
+
+完整对照见 [Sign an MSIX package](https://learn.microsoft.com/windows/msix/package/signing-package-overview)。
 
 ## 功能
 

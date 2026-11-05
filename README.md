@@ -31,11 +31,51 @@ The latest build is on the [Releases](https://github.com/Churroser/winmine/relea
 The MSIX is signed with a self-signed certificate, so Windows asks you to trust it first. In an **elevated** PowerShell:
 
 ```powershell
-certutil -addstore Root WinMine-msix-selfsigned.cer   # trust the certificate (once)
+Import-Certificate -FilePath .\WinMine-msix-selfsigned.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople
 Add-AppxPackage .\WinMine-1.1.0-x64.msix              # install
 ```
 
+`TrustedPeople` is the store AppX actually checks for a signing certificate; the package's chain also has to end in a trusted root, which is why the machine store (not the per-user one) is required — a non-elevated `Import-Certificate` to `Cert:\CurrentUser\TrustedPeople` still fails with `0x800B0109: the root certificate of the signature in the app package or bundle must be trusted`. The GUI equivalent is: double-click the `.cer` → **Install Certificate** → **Local machine** → **Place all certificates in the following store** → **Trusted People**.
+
+Only machines where you (or an administrator) import that certificate can install packages signed with it, and whoever holds the matching private key can sign anything those machines will then trust — treat the `.pfx` as a secret. To roll it out at scale, push the certificate through Intune/GPO (`Computer Configuration → Policies → Windows Settings → Security Settings → Public Key Policies → Trusted Publishers`) or script `certutil -addstore TrustedPeople <cer>` in your deployment.
+
 The package is self-contained, so installing it does **not** pull in .NET or the Windows App SDK runtime. Remove it with `Remove-AppxPackage Churroser.WinMine` or from Settings → Apps. If you would rather not touch the certificate store at all, use the ZIP.
+
+### Signing with a real certificate
+
+A self-signed certificate is for local testing only. For distribution, Windows must be able to chain your signature to a root it already trusts:
+
+| Route | Cost | What you get |
+| --- | --- | --- |
+| **Azure Artifact Signing** (formerly Trusted Signing) | ~$10/month | Microsoft-run signing service, certs valid ~3 days re-issued automatically to `timestamp.acs.microsoft.com`; identity-based SmartScreen reputation. Eligibility: orgs in the US/Canada/EU/UK with 3+ years of verifiable tax history, individual developers in the US/Canada |
+| **OV / EV code-signing certificate** from a CA (DigiCert, Sectigo, GlobalSign, SSL.com, Certum…) | $300–500/year | A certificate whose root is already in Windows. Since June 2023 the private key must live on a FIPS 140-2 hardware token or HSM, so there is no `.pfx` any more — sign with `signtool sign /sha1 <thumbprint>` against the token |
+| **Microsoft Store** | free (store signs for you) | Upload the unsigned-in-your-own-name MSIX to Partner Center; the Store re-signs it, so no certificate is needed at all. The manifest `Identity/@Publisher` must match your Partner Center identity (`CN=XXXXXXXX-…`) |
+
+Once you have one, the manifest publisher and the certificate subject have to match byte-for-byte:
+
+```powershell
+# what the manifest currently claims
+Select-String packaging\AppxManifest.xml -Pattern 'Publisher='
+
+# what your certificate actually says (pfx, or the token's cert in CurrentUser\My)
+(Get-PfxCertificate .\mycert.pfx).Subject
+```
+
+Then repack and sign with it — `tools\make-msix.ps1` accepts either form and always timestamps the signature, so the package keeps installing after the certificate expires:
+
+```powershell
+powershell -File tools\make-msix.ps1 -SkipBuild -CertificateThumbprint <thumbprint>   # OV/EV on a token
+powershell -File tools\make-msix.ps1 -SkipBuild -CertificatePath .\mycert.pfx         # pfx
+```
+
+For Azure Artifact Signing, SignTool needs its dlib plugin instead (`winget install -e --id Microsoft.Azure.ArtifactSigningClientTools`), then:
+
+```powershell
+signtool sign /fd SHA256 /tr http://timestamp.acs.microsoft.com /td SHA256 `
+  /dlib "<dlib>\x64\Azure.CodeSigning.Dlib.dll" /dmdf metadata.json WinMine-1.1.0-x64.msix
+```
+
+See [Sign an MSIX package](https://learn.microsoft.com/windows/msix/package/signing-package-overview) for the full matrix.
 
 ## Features
 
