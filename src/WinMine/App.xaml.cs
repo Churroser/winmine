@@ -18,6 +18,9 @@ public partial class App : Application
     /// <summary>When set (--selftest FILE), the app runs the scripted interaction suite and exits.</summary>
     public static string? SelfTestPath { get; private set; }
 
+    /// <summary>Optional UI language for the screenshot run (--lang en), so docs can ship a localised set.</summary>
+    public static WinMine.Core.AppLanguage? CaptureLanguageOverride { get; private set; }
+
     public static string LogDirectory { get; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WinMine");
 
@@ -33,6 +36,11 @@ public partial class App : Application
             else if (string.Equals(argv[i], "--selftest", StringComparison.OrdinalIgnoreCase))
             {
                 SelfTestPath = argv[i + 1];
+            }
+            else if (string.Equals(argv[i], "--lang", StringComparison.OrdinalIgnoreCase)
+                && WinMine.Core.LanguageResolver.TryParse(argv[i + 1], out var captureLanguage))
+            {
+                CaptureLanguageOverride = captureLanguage;
             }
         }
 

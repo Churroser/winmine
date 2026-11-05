@@ -4,19 +4,19 @@ English · [简体中文](README.zh-CN.md)
 
 A faithful rebuild of classic Minesweeper on **WinUI 3 / Windows App SDK**, restyled after Windows 11 Fluent Design: Mica backdrop, custom title bar, rounded cards, Segoe Fluent Icons glyphs, and automatic light/dark theming.
 
-![Beginner, light](docs/screenshots/01-beginner-new-light.png)
+![Beginner, light](docs/screenshots/en/01-beginner-new-light.png)
 
 | In progress (light) | Won (light) | Hit a mine (light) |
 | --- | --- | --- |
-| ![](docs/screenshots/02-beginner-playing-light.png) | ![](docs/screenshots/03-beginner-won-light.png) | ![](docs/screenshots/04-beginner-lost-light.png) |
+| ![](docs/screenshots/en/02-beginner-playing-light.png) | ![](docs/screenshots/en/03-beginner-won-light.png) | ![](docs/screenshots/en/04-beginner-lost-light.png) |
 
 | Intermediate (dark) | Expert (dark) | Custom board dialog |
 | --- | --- | --- |
-| ![](docs/screenshots/05-intermediate-playing-dark.png) | ![](docs/screenshots/06-expert-playing-dark.png) | ![](docs/screenshots/08-custom-dialog-light.png) |
+| ![](docs/screenshots/en/05-intermediate-playing-dark.png) | ![](docs/screenshots/en/06-expert-playing-dark.png) | ![](docs/screenshots/en/08-custom-dialog-light.png) |
 
-| 日本語 | English | Français | 한국어 |
+| 日本語 | 简体中文 | Français | 한국어 |
 | --- | --- | --- | --- |
-| ![](docs/screenshots/09-localized-japanese.png) | ![](docs/screenshots/10-localized-english.png) | ![](docs/screenshots/11-localized-french.png) | ![](docs/screenshots/12-localized-korean.png) |
+| ![](docs/screenshots/en/09-localized-japanese.png) | ![](docs/screenshots/en/10-localized-chinese.png) | ![](docs/screenshots/en/11-localized-french.png) | ![](docs/screenshots/en/12-localized-korean.png) |
 
 ## Features
 
@@ -91,9 +91,13 @@ dotnet test tests/WinMine.Core.Tests/WinMine.Core.Tests.csproj
 # UI self-check: drives the real window and board control, writes a PASS/FAIL report
 src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --selftest artifacts/selftest.txt
 
-# UI screenshots: renders 12 scripted states to PNG (no visible desktop required)
-src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --capture artifacts/shots
+# UI screenshots: renders 12 scripted states to PNG (no visible desktop required);
+# --lang picks the UI language of the set, so each README gets screenshots in its own language
+src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --capture artifacts/shots-en --lang en
+src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --capture artifacts/shots-zh --lang zh-Hans
 ```
+
+The screenshots used by this page live in [docs/screenshots/en](docs/screenshots/en); the Chinese page uses [docs/screenshots/zh](docs/screenshots/zh).
 
 `--selftest` covers 85 checks: first-click safety, flood-fill extent, flag/unflag/reject-flag-on-revealed, chording, the timer actually ticking, auto-flagging plus best time on a win, all mines revealed and further input ignored after a loss, cell counts for all three presets and for custom boards, the window staying inside the work area, settings JSON round-trip, theme switching, the shortcuts plus "no accelerator key-tip source exists anywhere in the visual tree" (a regression guard for the F2 bubble that used to appear when hovering the board), the custom dialog's number-box state (all spin buttons hidden, values clamped), audio (valid WAV headers, durations, a measured 880 Hz pitch, silence when muted, the audio device accepting playback, and WinUI control sounds being available), and localization (all five tables carry the same keys with no empty entries, placeholders survive translation, `zh-CN`/`zh-TW`/`ja`/`fr-CA`/`ko`/`en-GB`/`de-DE`/invariant all resolve, an explicit choice wins over the OS language, and every surface — window title, title-bar caption, difficulty tabs, board automation name, footer, status line, dialogs and validation text — actually re-renders in the new language).
 

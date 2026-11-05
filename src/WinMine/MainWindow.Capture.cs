@@ -48,6 +48,11 @@ public sealed partial class MainWindow
 
     private async Task CaptureScenariosAsync(string directory)
     {
+        // --lang picks the base language of the whole set, so the docs can ship one screenshot
+        // folder per README language. Defaults to Simplified Chinese.
+        AppLanguage baseline = App.CaptureLanguageOverride ?? AppLanguage.ChineseSimplified;
+        CaptureLanguage(baseline);
+
         // 1 · 初级 · 浅色 · 刚开局
         SetCaptureTheme(AppTheme.Light);
         StartNewGame(BoardPreset.Beginner, DifficultyLevel.Beginner, 20240607);
@@ -105,25 +110,41 @@ public sealed partial class MainWindow
         await Task.Delay(300);
         await CaptureCustomDialogAsync(Path.Combine(directory, "08-custom-dialog-light.png"));
 
-        // 9–12 · 多语言：同一局面，四种界面语言
-        foreach (var (language, index, theme) in new[]
-                 {
-                     (AppLanguage.Japanese, "09", AppTheme.Light),
-                     (AppLanguage.English, "10", AppTheme.Light),
-                     (AppLanguage.French, "11", AppTheme.Dark),
-                     (AppLanguage.Korean, "12", AppTheme.Light),
-                 })
+        // 9–12 · 多语言：同一局面，另外四种界面语言（不含当前基准语言）
+        var localizedShots = new[]
+            {
+                (AppLanguage.Japanese, AppTheme.Light),
+                (AppLanguage.English, AppTheme.Light),
+                (AppLanguage.ChineseSimplified, AppTheme.Light),
+                (AppLanguage.French, AppTheme.Dark),
+                (AppLanguage.Korean, AppTheme.Light),
+            }
+            .Where(shot => shot.Item1 != baseline)
+            .ToArray();
+
+        for (int i = 0; i < localizedShots.Length; i++)
         {
+            var (language, theme) = localizedShots[i];
             SetCaptureTheme(theme);
             CaptureLanguage(language);
             StartNewGame(BoardPreset.Beginner, DifficultyLevel.Beginner, 20240607);
             PlayDemo(new Cell(4, 4), seed: 20240607, reveals: 5, flags: 2);
             await Task.Delay(1400);
-            await SaveShotAsync(Path.Combine(directory, $"{index}-localized-{language.ToString().ToLowerInvariant()}.png"));
+            await SaveShotAsync(Path.Combine(directory, $"{9 + i:00}-localized-{LanguageShotName(language)}.png"));
         }
 
-        CaptureLanguage(AppLanguage.ChineseSimplified);
+        CaptureLanguage(baseline);
     }
+
+    /// <summary>File-name fragment for a language's screenshot (English, not "english").</summary>
+    private static string LanguageShotName(AppLanguage language) => language switch
+    {
+        AppLanguage.Japanese => "japanese",
+        AppLanguage.ChineseSimplified => "chinese",
+        AppLanguage.French => "french",
+        AppLanguage.Korean => "korean",
+        _ => "english",
+    };
 
     /// <summary>Switches the whole window to <paramref name="language"/> for a screenshot.</summary>
     private void CaptureLanguage(AppLanguage language)

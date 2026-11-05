@@ -4,19 +4,19 @@
 
 用 **WinUI 3 / Windows App SDK** 复刻的经典扫雷，按 Windows 11 Fluent Design 重做界面：Mica 背景、自定义标题栏、圆角卡片、Segoe Fluent Icons 图标、浅色/深色主题自适应。
 
-![初级·浅色](docs/screenshots/01-beginner-new-light.png)
+![初级·浅色](docs/screenshots/zh/01-beginner-new-light.png)
 
 | 进行中（浅色） | 通关（浅色） | 踩雷（浅色） |
 | --- | --- | --- |
-| ![](docs/screenshots/02-beginner-playing-light.png) | ![](docs/screenshots/03-beginner-won-light.png) | ![](docs/screenshots/04-beginner-lost-light.png) |
+| ![](docs/screenshots/zh/02-beginner-playing-light.png) | ![](docs/screenshots/zh/03-beginner-won-light.png) | ![](docs/screenshots/zh/04-beginner-lost-light.png) |
 
 | 中级（深色） | 高级（深色） | 自定义棋盘对话框 |
 | --- | --- | --- |
-| ![](docs/screenshots/05-intermediate-playing-dark.png) | ![](docs/screenshots/06-expert-playing-dark.png) | ![](docs/screenshots/08-custom-dialog-light.png) |
+| ![](docs/screenshots/zh/05-intermediate-playing-dark.png) | ![](docs/screenshots/zh/06-expert-playing-dark.png) | ![](docs/screenshots/zh/08-custom-dialog-light.png) |
 
 | 日本語 | English | Français | 한국어 |
 | --- | --- | --- | --- |
-| ![](docs/screenshots/09-localized-japanese.png) | ![](docs/screenshots/10-localized-english.png) | ![](docs/screenshots/11-localized-french.png) | ![](docs/screenshots/12-localized-korean.png) |
+| ![](docs/screenshots/zh/09-localized-japanese.png) | ![](docs/screenshots/zh/10-localized-english.png) | ![](docs/screenshots/zh/11-localized-french.png) | ![](docs/screenshots/zh/12-localized-korean.png) |
 
 ## 功能
 
@@ -91,9 +91,12 @@ dotnet test tests/WinMine.Core.Tests/WinMine.Core.Tests.csproj
 # 界面自检：驱动真实窗口与棋盘控件，输出 PASS/FAIL 报告
 src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --selftest artifacts/selftest.txt
 
-# 界面截图：把脚本化的 12 个状态渲染成 PNG（不需要可见桌面）
-src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --capture artifacts/shots
+# 界面截图：把脚本化的 12 个状态渲染成 PNG（不需要可见桌面）；--lang 指定整套截图的界面语言
+src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --capture artifacts/shots-zh --lang zh-Hans
+src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --capture artifacts/shots-en --lang en
 ```
+
+本页截图放在 [docs/screenshots/zh](docs/screenshots/zh)，英文版 README 用的是 [docs/screenshots/en](docs/screenshots/en)。
 
 `--selftest` 覆盖 85 项检查：首点安全、泛洪范围、插旗/取消插旗/已翻开格拒绝插旗、chord 展开、计时器走动、通关自动插旗与最佳成绩、踩雷揭示全部地雷与拒绝后续操作、三档难度与自定义棋盘的格子数量、窗口不超出工作区、设置 JSON 往返、主题切换，快捷键与“界面里不存在加速键提示源”（专门守住“悬停棋盘冒出 F2 气泡”这个回归），自定义棋盘对话框的输入框状态（全部隐藏上下箭头、取值区间受控），音效（WAV 头合法、时长、880 Hz 音高实测、静音后不输出、音频设备接受播放、WinUI 控件音效可用），以及多语言（5 张表键集一致且无空值、占位符跨语言一致、`zh-CN`/`zh-TW`/`ja`/`fr-CA`/`ko`/`en-GB`/`de-DE`/不变文化都能正确回退、显式选择优先于系统语言、并且窗口标题/标题栏文案/难度页签/棋盘无障碍名/页脚/状态行/对话框与校验文案确实都换成了新语言）。
 
