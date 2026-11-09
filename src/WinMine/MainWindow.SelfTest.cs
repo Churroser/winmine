@@ -503,7 +503,7 @@ public sealed partial class MainWindow
         }
 
         lines.Insert(0, $"WinMine 自检报告 · {DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss zzz}");
-        lines.Insert(1, $"引擎版本 {typeof(Minefield).Assembly.GetName().Version} · WinUI {Environment.Version}");
+        lines.Insert(1, $"应用版本 {AppVersion} · 引擎 {typeof(Minefield).Assembly.GetName().Version} · WinUI {Environment.Version}");
         lines.Add(string.Empty);
         lines.Add($"RESULT: {(failures == 0 ? "ALL PASS" : failures + " FAILED")}  ({total - failures}/{total})");
 

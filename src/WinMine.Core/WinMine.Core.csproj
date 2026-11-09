@@ -6,5 +6,6 @@
     <LangVersion>latest</LangVersion>
     <RootNamespace>WinMine.Core</RootNamespace>
     <AssemblyName>WinMine.Core</AssemblyName>
+    <Version>1.2.0</Version>
   </PropertyGroup>
 </Project>
