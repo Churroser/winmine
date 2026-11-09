@@ -484,6 +484,29 @@ public sealed partial class MainWindow
                 SettingsView.ThemeHeader == Loc.T("settings.theme") && SettingsView.LanguageOptionCount == LanguageResolver.Supported.Count + 1,
                 $"{SettingsView.ThemeHeader}/{SettingsView.LanguageOptionCount}");
 
+            // Picking a language from the dropdown used to tear down the ComboBox item collection
+            // from inside its own SelectionChanged handler, which crashed the process.
+            Check("下拉里有全部语言选项", SettingsView.SelectLanguageForTest(AppLanguage.Korean), "korean found");
+            await Task.Delay(200);
+            Check("在下拉里选语言不崩溃且立即生效",
+                _settings.Language == AppLanguage.Korean && Loc.Current == AppLanguage.Korean
+                && SettingsView.SelectedLanguage == AppLanguage.Korean,
+                $"{_settings.Language}/{Loc.Current}/{SettingsView.SelectedLanguage}");
+            Check("选完语言后选项没有被重建",
+                SettingsView.LanguageOptionCount == LanguageResolver.Supported.Count + 1,
+                SettingsView.LanguageOptionCount.ToString());
+
+            // Same pick, but with the popup actually open: this is where the item containers exist
+            // and where tearing the collection down would have crashed.
+            SettingsView.SetLanguageDropDownForTest(true);
+            await Task.Delay(120);
+            bool pickedInPopup = SettingsView.SelectLanguageForTest(AppLanguage.Japanese);
+            SettingsView.SetLanguageDropDownForTest(false);
+            await Task.Delay(250);
+            Check("展开下拉时选语言也不崩溃",
+                pickedInPopup && _settings.Language == AppLanguage.Japanese && Loc.Current == AppLanguage.Japanese,
+                $"{_settings.Language}/{Loc.Current}");
+
             SelectPage(false);
             await Task.Delay(60);
             Check("返回后游戏页恢复", GameView.Visibility == Visibility.Visible && SettingsView.Visibility == Visibility.Collapsed,

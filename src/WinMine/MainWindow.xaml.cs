@@ -39,6 +39,7 @@ public sealed partial class MainWindow : Window
     private bool _suppressDifficultyChanges;
     private bool _suppressNavChanges;
     private bool _modalOpen;
+    private bool _applyingLanguage;
     private bool _loaded;
 
     public MainWindow()
@@ -448,18 +449,27 @@ public sealed partial class MainWindow : Window
         UpdateBestTimeText();
     }
 
-    /// <summary>Applies a language picked in the settings menu and remembers the choice.</summary>
+    /// <summary>Applies a language picked in settings and remembers the choice.</summary>
     private void SetLanguage(AppLanguage language)
     {
-        if (_settings.Language == language)
+        if (_applyingLanguage || _settings.Language == language)
         {
             return;
         }
 
-        _settings.Language = language;
-        ApplyLanguage();
-        SetStatus(string.Empty, StatusTone.Neutral);
-        FitWindowToBoard();
+        _applyingLanguage = true;
+        try
+        {
+            _settings.Language = language;
+            ApplyLanguage();
+            SetStatus(string.Empty, StatusTone.Neutral);
+            FitWindowToBoard();
+        }
+        finally
+        {
+            _applyingLanguage = false;
+        }
+
         UiSounds.Play(ElementSoundKind.Invoke);
         SaveSettings();
     }
@@ -620,31 +630,64 @@ public sealed partial class MainWindow : Window
 
     private void SettingsView_ThemeChanged(object? sender, AppTheme theme)
     {
-        _settings.Theme = theme;
-        ApplyThemeSetting();
-        if (_board is not null)
+        // Same reasoning as the language handler: switching the theme re-templates the whole window,
+        // which must not happen while the ComboBox that raised the event is still closing its popup.
+        DispatcherQueue.TryEnqueue(() =>
         {
-            SetStatus(StatusText.Text, StatusTone.Neutral);
-        }
+            try
+            {
+                _settings.Theme = theme;
+                ApplyThemeSetting();
+                if (_board is not null)
+                {
+                    SetStatus(StatusText.Text, StatusTone.Neutral);
+                }
 
-        UiSounds.Play(ElementSoundKind.Invoke);
-        SaveSettings();
-        SettingsView.SyncFrom(_settings);
+                UiSounds.Play(ElementSoundKind.Invoke);
+                SaveSettings();
+                SettingsView.SyncFrom(_settings);
+            }
+            catch (Exception ex)
+            {
+                App.LogCrash(ex);
+            }
+        });
     }
 
     private void SettingsView_SoundChanged(object? sender, bool enabled)
     {
-        _settings.SoundEnabled = enabled;
-        ApplySoundSetting();
-        UiSounds.Play(ElementSoundKind.Invoke);
-        GameSounds.Play(GameSound.Click);
-        SaveSettings();
+        try
+        {
+            _settings.SoundEnabled = enabled;
+            ApplySoundSetting();
+            UiSounds.Play(ElementSoundKind.Invoke);
+            GameSounds.Play(GameSound.Click);
+            SaveSettings();
+        }
+        catch (Exception ex)
+        {
+            App.LogCrash(ex);
+        }
     }
 
     private void SettingsView_LanguageChanged(object? sender, AppLanguage language)
     {
-        SetLanguage(language);
-        SettingsView.SyncFrom(_settings);
+        // Re-rendering the page and resizing the window from inside the ComboBox's own
+        // SelectionChanged callback (the dropdown is still closing at that point) is what used to
+        // take the process down, so the work is deferred to the next dispatcher tick.
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            try
+            {
+                SetLanguage(language);
+                SettingsView.SyncFrom(_settings);
+            }
+            catch (Exception ex)
+            {
+                // An exception escaping a XAML event handler takes the process down; log and keep going.
+                App.LogCrash(ex);
+            }
+        });
     }
 
     private async void SettingsView_ResetBestTimesRequested(object? sender, EventArgs e) =>

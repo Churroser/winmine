@@ -12,11 +12,14 @@ namespace WinMine.Views;
 /// </summary>
 public sealed partial class SettingsPage : UserControl
 {
+    private static readonly AppTheme[] ThemeOrder = [AppTheme.System, AppTheme.Light, AppTheme.Dark];
+
     private bool _syncing;
 
     public SettingsPage()
     {
         InitializeComponent();
+        BuildOptions();
         ApplyLocalization();
     }
 
@@ -57,7 +60,7 @@ public sealed partial class SettingsPage : UserControl
         AboutCard.Header = Loc.T("app.title");
         SourceLink.Content = Loc.T("settings.viewSource");
 
-        RefreshOptions();
+        UpdateOptionTexts();
     }
 
     /// <summary>Shows the version next to the About row.</summary>
@@ -73,6 +76,24 @@ public sealed partial class SettingsPage : UserControl
     internal string ThemeHeader => ThemeCard.Header;
 
     internal int LanguageOptionCount => LanguageCombo.Items.Count;
+
+    /// <summary>Simulates a real pick in the language dropdown (used by --selftest).</summary>
+    internal bool SelectLanguageForTest(AppLanguage language)
+    {
+        foreach (object item in LanguageCombo.Items)
+        {
+            if (item is ComboBoxItem row && row.Tag is AppLanguage tag && tag == language)
+            {
+                LanguageCombo.SelectedItem = row;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Opens the language popup so a test can select while the item containers exist.</summary>
+    internal void SetLanguageDropDownForTest(bool open) => LanguageCombo.IsDropDownOpen = open;
 
     /// <summary>Pushes the persisted settings into the controls without raising change events.</summary>
     public void SyncFrom(GameSettings settings)
@@ -90,35 +111,64 @@ public sealed partial class SettingsPage : UserControl
         }
     }
 
-    /// <summary>Rebuilds the combo items so that their text follows the current language.</summary>
-    private void RefreshOptions()
+    /// <summary>
+    /// Creates the combo items once. They are never cleared afterwards: emptying a ComboBox's item
+    /// collection from inside its own SelectionChanged handler (the language switch re-renders the
+    /// page) tears down the item container while the popup is still closing and crashes the app.
+    /// </summary>
+    private void BuildOptions()
     {
-        AppTheme theme = CurrentTag(ThemeCombo, AppTheme.System);
-        AppLanguage language = CurrentTag(LanguageCombo, AppLanguage.System);
-
         _syncing = true;
         try
         {
-            ThemeCombo.Items.Clear();
-            ThemeCombo.Items.Add(Option(Loc.T("menu.themeSystem"), AppTheme.System));
-            ThemeCombo.Items.Add(Option(Loc.T("menu.themeLight"), AppTheme.Light));
-            ThemeCombo.Items.Add(Option(Loc.T("menu.themeDark"), AppTheme.Dark));
-
-            LanguageCombo.Items.Clear();
-            LanguageCombo.Items.Add(Option(Loc.T("menu.languageSystem"), AppLanguage.System));
-            foreach (AppLanguage candidate in LanguageResolver.Supported)
+            foreach (AppTheme theme in ThemeOrder)
             {
-                LanguageCombo.Items.Add(Option(LanguageResolver.NativeName(candidate), candidate));
+                ThemeCombo.Items.Add(Option(string.Empty, theme));
             }
 
-            SelectByTag(ThemeCombo, theme);
-            SelectByTag(LanguageCombo, language);
+            LanguageCombo.Items.Add(Option(string.Empty, AppLanguage.System));
+            foreach (AppLanguage candidate in LanguageResolver.Supported)
+            {
+                LanguageCombo.Items.Add(Option(string.Empty, candidate));
+            }
+
+            ThemeCombo.SelectedIndex = 0;
+            LanguageCombo.SelectedIndex = 0;
         }
         finally
         {
             _syncing = false;
         }
     }
+
+    /// <summary>Retranslates the existing items in place; the item objects (and the selection) stay put.</summary>
+    private void UpdateOptionTexts()
+    {
+        foreach (object item in ThemeCombo.Items)
+        {
+            if (item is ComboBoxItem row && row.Tag is AppTheme theme)
+            {
+                row.Content = ThemeLabel(theme);
+            }
+        }
+
+        foreach (object item in LanguageCombo.Items)
+        {
+            if (item is ComboBoxItem row && row.Tag is AppLanguage language)
+            {
+                row.Content = language == AppLanguage.System
+                    ? Loc.T("menu.languageSystem")
+                    : LanguageResolver.NativeName(language);
+            }
+        }
+    }
+
+    private static string ThemeLabel(AppTheme theme) => theme switch
+    {
+        AppTheme.Light => Loc.T("menu.themeLight"),
+        AppTheme.Dark => Loc.T("menu.themeDark"),
+        _ => Loc.T("menu.themeSystem"),
+    };
 
     private static ComboBoxItem Option(string text, object tag) => new() { Content = text, Tag = tag };
 
