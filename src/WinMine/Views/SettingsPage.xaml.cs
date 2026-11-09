@@ -16,6 +16,8 @@ public sealed partial class SettingsPage : UserControl
 
     private bool _syncing;
 
+    private string _version = "1.0.0";
+
     public SettingsPage()
     {
         InitializeComponent();
@@ -59,12 +61,19 @@ public sealed partial class SettingsPage : UserControl
         ResetButton.Content = Loc.T("settings.resetButton");
         AboutCard.Header = Loc.T("app.title");
         SourceLink.Content = Loc.T("settings.viewSource");
+        ApplyVersionText();
 
         UpdateOptionTexts();
     }
 
-    /// <summary>Shows the version next to the About row.</summary>
-    public void SetVersion(string version) => VersionText.Text = Loc.F("settings.version", version);
+    /// <summary>Shows the version under the app name, the way Windows 11 Settings does.</summary>
+    public void SetVersion(string version)
+    {
+        _version = version;
+        ApplyVersionText();
+    }
+
+    private void ApplyVersionText() => AboutCard.Description = Loc.F("settings.version", _version);
 
     // Read-only mirrors of the control state, used by --selftest.
     internal AppTheme SelectedTheme => CurrentTag(ThemeCombo, AppTheme.System);
@@ -74,6 +83,9 @@ public sealed partial class SettingsPage : UserControl
     internal bool SoundOn => SoundToggle.IsOn;
 
     internal string ThemeHeader => ThemeCard.Header;
+
+    /// <summary>The subtitle under the app name; carries the localised version string.</summary>
+    internal string VersionDescription => AboutCard.Description;
 
     internal int LanguageOptionCount => LanguageCombo.Items.Count;
 

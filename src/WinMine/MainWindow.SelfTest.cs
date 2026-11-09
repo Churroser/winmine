@@ -484,6 +484,13 @@ public sealed partial class MainWindow
                 SettingsView.ThemeHeader == Loc.T("settings.theme") && SettingsView.LanguageOptionCount == LanguageResolver.Supported.Count + 1,
                 $"{SettingsView.ThemeHeader}/{SettingsView.LanguageOptionCount}");
 
+            // The version sits under the app name and must be localised too; it used to be a TextBlock
+            // that was only written when the page was first shown.
+            Check("关于行的版本号跟随语言",
+                SettingsView.VersionDescription == Loc.F("settings.version", AppVersion)
+                && SettingsView.VersionDescription.Contains(AppVersion, StringComparison.Ordinal),
+                $"[{SettingsView.VersionDescription}] vs [{Loc.F("settings.version", AppVersion)}]");
+
             // The ComboBox snapshots the selected item's text, so the closed box used to keep the old
             // language after a switch. The dropped selection must also survive the refresh.
             // The ComboBox snapshots the selected item's text, so the closed box used to keep the old

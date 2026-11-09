@@ -100,19 +100,11 @@
                 x:Name="AboutCard"
                 Glyph="&#xE946;"
                 Header="扫雷">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <TextBlock
-                        x:Name="VersionText"
-                        VerticalAlignment="Center"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                        Style="{StaticResource CaptionTextBlockStyle}"
-                        Text="版本 1.0.0" />
-                    <HyperlinkButton
-                        x:Name="SourceLink"
-                        Padding="8,2,8,2"
-                        Click="SourceLink_Click"
-                        Content="在 GitHub 上查看" />
-                </StackPanel>
+                <HyperlinkButton
+                    x:Name="SourceLink"
+                    Padding="8,2,8,2"
+                    Click="SourceLink_Click"
+                    Content="在 GitHub 上查看" />
             </controls:SettingsCard>
         </StackPanel>
     </ScrollViewer>
