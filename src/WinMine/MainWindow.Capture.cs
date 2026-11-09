@@ -134,6 +134,21 @@ public sealed partial class MainWindow
         }
 
         CaptureLanguage(baseline);
+
+        // 13–14 · 设置页（浅色 / 深色）
+        SetCaptureTheme(AppTheme.Light);
+        SelectPage(true);
+        SettingsView.SyncFrom(_settings);
+        await Task.Delay(900);
+        await SaveShotAsync(Path.Combine(directory, "13-settings-light.png"));
+
+        SetCaptureTheme(AppTheme.Dark);
+        SettingsView.SyncFrom(_settings);
+        await Task.Delay(700);
+        await SaveShotAsync(Path.Combine(directory, "14-settings-dark.png"));
+
+        SelectPage(false);
+        await Task.Delay(200);
     }
 
     /// <summary>File-name fragment for a language's screenshot (English, not "english").</summary>
@@ -178,7 +193,10 @@ public sealed partial class MainWindow
             Child = content,
         };
 
-        ContentHost.Children.Add(host);
+        // Overlay straight on the root grid: ContentHost is a NavigationView now, and the dialog
+        // body has to sit above the page content anyway.
+        Grid.SetRow(host, 1);
+        RootGrid.Children.Add(host);
         try
         {
             await Task.Delay(400);
@@ -190,7 +208,7 @@ public sealed partial class MainWindow
         }
         finally
         {
-            ContentHost.Children.Remove(host);
+            RootGrid.Children.Remove(host);
             await Task.Delay(100);
         }
     }
@@ -300,6 +318,7 @@ public sealed partial class MainWindow
 
     private void SetCaptureTheme(AppTheme theme)
     {
+        _settings.Theme = theme;
         RootGrid.RequestedTheme = theme == AppTheme.Dark ? ElementTheme.Dark : ElementTheme.Light;
         RootGrid.Background = new SolidColorBrush(theme == AppTheme.Dark
             ? Color.FromArgb(255, 0x20, 0x20, 0x20)

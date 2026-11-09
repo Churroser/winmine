@@ -5,6 +5,7 @@
     xmlns:controls="using:WinMine.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:views="using:WinMine.Views"
     mc:Ignorable="d">
 
     <Grid x:Name="RootGrid" Background="Transparent">
@@ -26,106 +27,133 @@
             </StackPanel>
         </Grid>
 
-        <Grid x:Name="ContentHost" Grid.Row="1" Padding="20,2,20,20">
-            <StackPanel x:Name="ContentStack" Spacing="12">
+        <!-- 左窄栏导航：游戏 / 设置 -->
+        <NavigationView
+            x:Name="Nav"
+            Grid.Row="1"
+            Background="Transparent"
+            CompactModeThresholdWidth="0"
+            CompactPaneLength="48"
+            IsBackButtonVisible="Collapsed"
+            IsPaneOpen="False"
+            IsSettingsVisible="False"
+            IsTitleBarAutoPaddingEnabled="False"
+            OpenPaneLength="188"
+            PaneDisplayMode="LeftCompact"
+            SelectionChanged="Nav_SelectionChanged">
 
-                <!-- 命令栏 -->
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
+            <NavigationView.MenuItems>
+                <NavigationViewItem x:Name="NavGameItem" Content="Game" Tag="game">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE7C1;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="NavSettingsItem" Content="Settings" Tag="settings">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE713;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
 
-                    <SelectorBar x:Name="DifficultyBar" SelectionChanged="DifficultyBar_SelectionChanged" VerticalAlignment="Center">
-                        <SelectorBarItem x:Name="ItemBeginner" Text="Beginner" />
-                        <SelectorBarItem x:Name="ItemIntermediate" Text="Intermediate" />
-                        <SelectorBarItem x:Name="ItemExpert" Text="Expert" />
-                        <SelectorBarItem x:Name="ItemCustom" Text="Custom" />
-                    </SelectorBar>
+            <Grid>
+                <!-- 游戏页 -->
+                <Grid x:Name="GameView" Padding="20,2,20,20">
+                    <StackPanel x:Name="ContentStack" Spacing="12">
 
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
-                        <Button
-                            x:Name="NewGameButton"
-                            Style="{StaticResource IconToolbarButtonStyle}"
-                            Click="NewGameButton_Click"
-                            ToolTipService.ToolTip="New game (F2)"
-                            AutomationProperties.Name="New game">
-                            <FontIcon Glyph="&#xE72C;" FontSize="15" />
-                        </Button>
-                        <Button
-                            x:Name="SettingsButton"
-                            Style="{StaticResource IconToolbarButtonStyle}"
-                            Click="SettingsButton_Click"
-                            ToolTipService.ToolTip="Settings"
-                            AutomationProperties.Name="Settings">
-                            <FontIcon Glyph="&#xE713;" FontSize="15" />
-                        </Button>
+                        <!-- 命令栏 -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <SelectorBar x:Name="DifficultyBar" SelectionChanged="DifficultyBar_SelectionChanged" VerticalAlignment="Center">
+                                <SelectorBarItem x:Name="ItemBeginner" Text="Beginner" />
+                                <SelectorBarItem x:Name="ItemIntermediate" Text="Intermediate" />
+                                <SelectorBarItem x:Name="ItemExpert" Text="Expert" />
+                                <SelectorBarItem x:Name="ItemCustom" Text="Custom" />
+                            </SelectorBar>
+
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                                <Button
+                                    x:Name="NewGameButton"
+                                    Style="{StaticResource IconToolbarButtonStyle}"
+                                    Click="NewGameButton_Click"
+                                    ToolTipService.ToolTip="New game (F2)"
+                                    AutomationProperties.Name="New game">
+                                    <FontIcon Glyph="&#xE72C;" FontSize="15" />
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- 计数与重开 -->
+                        <Border Style="{StaticResource CardBorderStyle}">
+                            <Grid Height="62" Padding="6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="14,0,0,0">
+                                    <FontIcon Glyph="&#xE7C1;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <TextBlock x:Name="MineCounterText" Text="010" Style="{StaticResource CounterTextStyle}" />
+                                </StackPanel>
+
+                                <Button
+                                    x:Name="ResetButton"
+                                    Grid.Column="1"
+                                    Width="42"
+                                    Height="42"
+                                    Padding="0"
+                                    CornerRadius="21"
+                                    Click="ResetButton_Click"
+                                    ToolTipService.ToolTip="Restart (F2)"
+                                    AutomationProperties.Name="Restart">
+                                    <TextBlock
+                                        x:Name="FaceText"
+                                        Text="🙂"
+                                        FontFamily="Segoe UI Emoji"
+                                        FontSize="19"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center" />
+                                </Button>
+
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,14,0">
+                                    <TextBlock x:Name="TimerText" Text="000" Style="{StaticResource CounterTextStyle}" />
+                                    <FontIcon Glyph="&#xE823;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- 棋盘 -->
+                        <Border x:Name="BoardCard" Style="{StaticResource CardBorderStyle}">
+                            <controls:BoardView x:Name="Board" AutomationProperties.Name="Minesweeper board" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+
+                        <!-- 页脚：最佳成绩 + 状态 -->
+                        <Grid Height="20">
+                            <TextBlock
+                                x:Name="BestTimeText"
+                                FontSize="12"
+                                VerticalAlignment="Center"
+                                TextTrimming="CharacterEllipsis"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock
+                                x:Name="StatusText"
+                                FontSize="12"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                TextTrimming="CharacterEllipsis"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </Grid>
                     </StackPanel>
                 </Grid>
 
-                <!-- 计数与重开 -->
-                <Border Style="{StaticResource CardBorderStyle}">
-                    <Grid Height="62" Padding="6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="14,0,0,0">
-                            <FontIcon Glyph="&#xE7C1;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            <TextBlock x:Name="MineCounterText" Text="010" Style="{StaticResource CounterTextStyle}" />
-                        </StackPanel>
-
-                        <Button
-                            x:Name="ResetButton"
-                            Grid.Column="1"
-                            Width="42"
-                            Height="42"
-                            Padding="0"
-                            CornerRadius="21"
-                            Click="ResetButton_Click"
-                            ToolTipService.ToolTip="Restart (F2)"
-                            AutomationProperties.Name="Restart">
-                            <TextBlock
-                                x:Name="FaceText"
-                                Text="🙂"
-                                FontFamily="Segoe UI Emoji"
-                                FontSize="19"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center" />
-                        </Button>
-
-                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,14,0">
-                            <TextBlock x:Name="TimerText" Text="000" Style="{StaticResource CounterTextStyle}" />
-                            <FontIcon Glyph="&#xE823;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        </StackPanel>
-                    </Grid>
-                </Border>
-
-                <!-- 棋盘 -->
-                <Border x:Name="BoardCard" Style="{StaticResource CardBorderStyle}">
-                    <controls:BoardView x:Name="Board" AutomationProperties.Name="Minesweeper board" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </Border>
-
-                <!-- 页脚：最佳成绩 + 状态 -->
-                <Grid Height="20">
-                    <TextBlock
-                        x:Name="BestTimeText"
-                        FontSize="12"
-                        VerticalAlignment="Center"
-                        TextTrimming="CharacterEllipsis"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock
-                        x:Name="StatusText"
-                        FontSize="12"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Center"
-                        TextTrimming="CharacterEllipsis"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                </Grid>
-            </StackPanel>
-        </Grid>
+                <!-- 设置页 -->
+                <views:SettingsPage x:Name="SettingsView" Visibility="Collapsed" />
+            </Grid>
+        </NavigationView>
     </Grid>
 </Window>

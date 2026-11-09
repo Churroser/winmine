@@ -216,8 +216,15 @@ public sealed partial class MainWindow
             Check("棋盘上没有加速键气泡来源", Board.KeyboardAccelerators.Count == 0 && RootGrid.KeyboardAccelerators.Count == 0,
                 $"board={Board.KeyboardAccelerators.Count} root={RootGrid.KeyboardAccelerators.Count}");
             Check("棋盘不设置工具提示", ToolTipService.GetToolTip(Board) is null, "ToolTip");
-            int acceleratorHosts = CountAcceleratorHosts(RootGrid);
-            Check("视觉树里没有任何加速键提示源", acceleratorHosts == 0, $"hosts={acceleratorHosts}");
+
+            // The board used to be the trigger for the "F2" keytip bubble. Anything the
+            // NavigationView shell brings along is fine, as long as it is not the board itself.
+            var acceleratorHosts = new List<string>();
+            int boardHosts = CountAcceleratorHosts(Board);
+            CountAcceleratorHosts(RootGrid, acceleratorHosts);
+            Check("棋盘内没有加速键提示源", boardHosts == 0, $"board={boardHosts}");
+            Check("加速键提示源都在棋盘之外", acceleratorHosts.All(host => !host.StartsWith("BoardView", StringComparison.Ordinal)),
+                string.Join(",", acceleratorHosts));
 
             StartNewGame(BoardPreset.Beginner, DifficultyLevel.Beginner, 20240607);
             await Task.Delay(80);
@@ -430,6 +437,62 @@ public sealed partial class MainWindow
 
             CaptureLanguage(AppLanguage.ChineseSimplified);
             StartNewGame(BoardPreset.Beginner, DifficultyLevel.Beginner, 20240607);
+
+            // ── 16 · 设置页（NavigationView + SettingsCard）──
+            Check("导航栏有两个页面", Nav.MenuItems.Count == 2,
+                string.Join(",", Nav.MenuItems.OfType<NavigationViewItem>().Select(i => i.Tag)));
+
+            SelectPage(true);
+            await Task.Delay(80);
+            Check("切到设置页后游戏页隐藏",
+                SettingsView.Visibility == Visibility.Visible && GameView.Visibility == Visibility.Collapsed,
+                $"{SettingsView.Visibility}/{GameView.Visibility}");
+
+            ShowPage(true);
+            SettingsView.SyncFrom(new GameSettings { Theme = AppTheme.Dark, Language = AppLanguage.French, SoundEnabled = false });
+            Check("设置页控件反映已保存的设置",
+                SettingsView.SelectedTheme == AppTheme.Dark
+                && SettingsView.SelectedLanguage == AppLanguage.French
+                && !SettingsView.SoundOn,
+                $"{SettingsView.SelectedTheme}/{SettingsView.SelectedLanguage}/{SettingsView.SoundOn}");
+
+            SettingsView.SyncFrom(new GameSettings { Theme = AppTheme.System, Language = AppLanguage.System, SoundEnabled = true });
+            Check("设置页默认项为跟随系统",
+                SettingsView.SelectedTheme == AppTheme.System && SettingsView.SelectedLanguage == AppLanguage.System && SettingsView.SoundOn,
+                $"{SettingsView.SelectedTheme}/{SettingsView.SelectedLanguage}/{SettingsView.SoundOn}");
+
+            // The page reports changes; the window is what persists them.
+            SettingsView_ThemeChanged(SettingsView, AppTheme.Dark);
+            await Task.Delay(80);
+            Check("设置页改主题即时生效",
+                _settings.Theme == AppTheme.Dark && RootGrid.ActualTheme == ElementTheme.Dark,
+                $"{_settings.Theme}/{RootGrid.ActualTheme}");
+            SettingsView_ThemeChanged(SettingsView, AppTheme.Light);
+            await Task.Delay(80);
+
+            SettingsView_SoundChanged(SettingsView, false);
+            Check("设置页关音效同步到两层",
+                !_settings.SoundEnabled && !GameSounds.Enabled && !UiSounds.Enabled,
+                $"{_settings.SoundEnabled}/{GameSounds.Enabled}/{UiSounds.Enabled}");
+            SettingsView_SoundChanged(SettingsView, true);
+            Check("设置页开音效恢复", _settings.SoundEnabled && GameSounds.Enabled && UiSounds.Enabled, "on");
+
+            CaptureLanguage(AppLanguage.Japanese);
+            SettingsView.ApplyLocalization();
+            await Task.Delay(60);
+            Check("设置页文案跟随语言",
+                SettingsView.ThemeHeader == Loc.T("settings.theme") && SettingsView.LanguageOptionCount == LanguageResolver.Supported.Count + 1,
+                $"{SettingsView.ThemeHeader}/{SettingsView.LanguageOptionCount}");
+
+            SelectPage(false);
+            await Task.Delay(60);
+            Check("返回后游戏页恢复", GameView.Visibility == Visibility.Visible && SettingsView.Visibility == Visibility.Collapsed,
+                $"{GameView.Visibility}/{SettingsView.Visibility}");
+            Check("返回后选中项回到游戏", ReferenceEquals(Nav.SelectedItem, NavGameItem), Nav.SelectedItem?.ToString() ?? "null");
+
+            CaptureLanguage(AppLanguage.ChineseSimplified);
+            ApplyThemeSetting();
+            StartNewGame(BoardPreset.Beginner, DifficultyLevel.Beginner, 20240607);
         }
         catch (Exception ex)
         {
@@ -483,13 +546,23 @@ public sealed partial class MainWindow
         return placeholder < 0 ? template : template[..placeholder];
     }
 
-    private static int CountAcceleratorHosts(DependencyObject node)
+    private static int CountAcceleratorHosts(DependencyObject node, List<string>? found = null)
     {
-        int count = node is UIElement element && element.KeyboardAccelerators.Count > 0 ? 1 : 0;
+        bool isHost = node is UIElement element && element.KeyboardAccelerators.Count > 0;
+        if (isHost)
+        {
+            string name = node is FrameworkElement fe && !string.IsNullOrEmpty(fe.Name) ? $"#{fe.Name}" : string.Empty;
+            string keys = node is UIElement host
+                ? string.Join("+", host.KeyboardAccelerators.Select(a => $"{a.Modifiers}:{a.Key}"))
+                : string.Empty;
+            found?.Add($"{node.GetType().Name}{name}({keys})");
+        }
+
+        int count = isHost ? 1 : 0;
         int children = VisualTreeHelper.GetChildrenCount(node);
         for (int i = 0; i < children; i++)
         {
-            count += CountAcceleratorHosts(VisualTreeHelper.GetChild(node, i));
+            count += CountAcceleratorHosts(VisualTreeHelper.GetChild(node, i), found);
         }
 
         return count;

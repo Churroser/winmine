@@ -24,6 +24,7 @@ public sealed partial class MainWindow : Window
 {
     private const double TitleBarHeight = 48;
     private const double MinContentWidth = 420;
+    private const double NavRailWidth = 48;
 
     private readonly SettingsStore _store = new();
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(250) };
@@ -36,6 +37,7 @@ public sealed partial class MainWindow : Window
     private Minefield? _board;
     private Brush? _neutralStatusBrush;
     private bool _suppressDifficultyChanges;
+    private bool _suppressNavChanges;
     private bool _modalOpen;
     private bool _loaded;
 
@@ -56,6 +58,13 @@ public sealed partial class MainWindow : Window
         _timer.Tick += (_, _) => UpdateTimerText(ElapsedSeconds());
         Board.MoveCompleted += Board_MoveCompleted;
         Board.PressStateChanged += Board_PressStateChanged;
+
+        SettingsView.ThemeChanged += SettingsView_ThemeChanged;
+        SettingsView.SoundChanged += SettingsView_SoundChanged;
+        SettingsView.LanguageChanged += SettingsView_LanguageChanged;
+        SettingsView.ResetBestTimesRequested += SettingsView_ResetBestTimesRequested;
+        SettingsView.ViewSourceRequested += SettingsView_ViewSourceRequested;
+
         Closed += (_, _) => SaveSettings();
     }
 
@@ -379,9 +388,9 @@ public sealed partial class MainWindow : Window
             // The board must be resized *before* measuring, otherwise the panel reports the
             // previous tile size and the search collapses to the smallest board.
             Board.UpdateCellSize(size);
-            double width = Math.Max(Board.MeasureWidthFor(size) + 40, MinContentWidth);
-            ContentHost.Measure(new Size(width, double.PositiveInfinity));
-            double height = TitleBarHeight + ContentHost.DesiredSize.Height;
+            double width = Math.Max(Board.MeasureWidthFor(size) + 40 + NavRailWidth, MinContentWidth);
+            Nav.Measure(new Size(width, double.PositiveInfinity));
+            double height = TitleBarHeight + Nav.DesiredSize.Height;
             if (width <= maxWidth && height <= maxHeight)
             {
                 chosen = size;
@@ -391,9 +400,9 @@ public sealed partial class MainWindow : Window
 
         Board.UpdateCellSize(chosen);
 
-        double contentWidth = Math.Max(Board.MeasureWidthFor(chosen) + 40, MinContentWidth);
-        ContentHost.Measure(new Size(contentWidth, double.PositiveInfinity));
-        double contentHeight = TitleBarHeight + ContentHost.DesiredSize.Height + 2;
+        double contentWidth = Math.Max(Board.MeasureWidthFor(chosen) + 40 + NavRailWidth, MinContentWidth);
+        Nav.Measure(new Size(contentWidth, double.PositiveInfinity));
+        double contentHeight = TitleBarHeight + Nav.DesiredSize.Height + 2;
 
         int pixelWidth = (int)Math.Ceiling(contentWidth * scale);
         int pixelHeight = (int)Math.Ceiling(contentHeight * scale);
@@ -428,11 +437,13 @@ public sealed partial class MainWindow : Window
 
         ToolTipService.SetToolTip(NewGameButton, Loc.T("button.newGame"));
         AutomationProperties.SetName(NewGameButton, Loc.T("button.newGame"));
-        ToolTipService.SetToolTip(SettingsButton, Loc.T("button.settings"));
-        AutomationProperties.SetName(SettingsButton, Loc.T("button.settings"));
         ToolTipService.SetToolTip(ResetButton, Loc.T("button.restart"));
         AutomationProperties.SetName(ResetButton, Loc.T("button.restart"));
         AutomationProperties.SetName(Board, Loc.T("board.name"));
+
+        NavGameItem.Content = Loc.T("nav.game");
+        NavSettingsItem.Content = Loc.T("nav.settings");
+        SettingsView.ApplyLocalization();
 
         UpdateBestTimeText();
     }
@@ -562,94 +573,93 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void SettingsButton_Click(object sender, RoutedEventArgs e)
+    // ── 导航与设置页 ────────────────────────────────────────────────────────────
+
+    private void Nav_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
-        UiSounds.Play(ElementSoundKind.Show);
-
-        var flyout = new MenuFlyout();
-
-        var appearance = new MenuFlyoutSubItem { Text = Loc.T("menu.appearance") };
-        foreach (var (theme, labelKey) in new[]
-                 {
-                     (AppTheme.System, "menu.themeSystem"),
-                     (AppTheme.Light, "menu.themeLight"),
-                     (AppTheme.Dark, "menu.themeDark"),
-                 })
+        if (_suppressNavChanges)
         {
-            var item = new RadioMenuFlyoutItem
-            {
-                Text = Loc.T(labelKey),
-                GroupName = "AppTheme",
-                IsChecked = _settings.Theme == theme,
-            };
-            item.Click += (_, _) =>
-            {
-                _settings.Theme = theme;
-                ApplyThemeSetting();
-                if (_board is not null)
-                {
-                    SetStatus(StatusText.Text, StatusTone.Neutral);
-                }
-
-                UiSounds.Play(ElementSoundKind.Invoke);
-                SaveSettings();
-            };
-            appearance.Items.Add(item);
+            return;
         }
 
-        flyout.Items.Add(appearance);
+        UiSounds.Play(ElementSoundKind.MoveNext);
+        ShowPage(IsSettingsContainer(args.SelectedItemContainer));
+    }
 
-        var language = new MenuFlyoutSubItem { Text = Loc.T("menu.language") };
-        var automatic = new RadioMenuFlyoutItem
-        {
-            Text = Loc.T("menu.languageSystem"),
-            GroupName = "AppLanguage",
-            IsChecked = _settings.Language == AppLanguage.System,
-        };
-        automatic.Click += (_, _) => SetLanguage(AppLanguage.System);
-        language.Items.Add(automatic);
-        language.Items.Add(new MenuFlyoutSeparator());
+    private static bool IsSettingsContainer(object? container) =>
+        container is NavigationViewItem item && item.Tag as string == "settings";
 
-        foreach (var candidate in LanguageResolver.Supported)
+    /// <summary>Swaps the game page and the settings page.</summary>
+    private void ShowPage(bool settings)
+    {
+        GameView.Visibility = settings ? Visibility.Collapsed : Visibility.Visible;
+        SettingsView.Visibility = settings ? Visibility.Visible : Visibility.Collapsed;
+
+        if (settings)
         {
-            var item = new RadioMenuFlyoutItem
-            {
-                Text = LanguageResolver.NativeName(candidate),
-                GroupName = "AppLanguage",
-                IsChecked = _settings.Language == candidate,
-            };
-            item.Click += (_, _) => SetLanguage(candidate);
-            language.Items.Add(item);
+            SettingsView.SetVersion(AppVersion);
+            SettingsView.SyncFrom(_settings);
+        }
+    }
+
+    /// <summary>Selects a page in the navigation view and shows it.</summary>
+    private void SelectPage(bool settings)
+    {
+        _suppressNavChanges = true;
+        try
+        {
+            Nav.SelectedItem = settings ? NavSettingsItem : NavGameItem;
+        }
+        finally
+        {
+            _suppressNavChanges = false;
         }
 
-        flyout.Items.Add(language);
+        ShowPage(settings);
+    }
 
-        var sound = new ToggleMenuFlyoutItem
+    private void SettingsView_ThemeChanged(object? sender, AppTheme theme)
+    {
+        _settings.Theme = theme;
+        ApplyThemeSetting();
+        if (_board is not null)
         {
-            Text = Loc.T("menu.sound"),
-            IsChecked = _settings.SoundEnabled,
-        };
-        sound.Click += (_, _) =>
+            SetStatus(StatusText.Text, StatusTone.Neutral);
+        }
+
+        UiSounds.Play(ElementSoundKind.Invoke);
+        SaveSettings();
+        SettingsView.SyncFrom(_settings);
+    }
+
+    private void SettingsView_SoundChanged(object? sender, bool enabled)
+    {
+        _settings.SoundEnabled = enabled;
+        ApplySoundSetting();
+        UiSounds.Play(ElementSoundKind.Invoke);
+        GameSounds.Play(GameSound.Click);
+        SaveSettings();
+    }
+
+    private void SettingsView_LanguageChanged(object? sender, AppLanguage language)
+    {
+        SetLanguage(language);
+        SettingsView.SyncFrom(_settings);
+    }
+
+    private async void SettingsView_ResetBestTimesRequested(object? sender, EventArgs e) =>
+        await ConfirmResetBestTimesAsync();
+
+    private async void SettingsView_ViewSourceRequested(object? sender, EventArgs e)
+    {
+        try
         {
-            _settings.SoundEnabled = sound.IsChecked;
-            ApplySoundSetting();
-            UiSounds.Play(ElementSoundKind.Invoke);
-            GameSounds.Play(GameSound.Click);
-            SaveSettings();
-        };
-        flyout.Items.Add(sound);
-
-        flyout.Items.Add(new MenuFlyoutSeparator());
-
-        var reset = new MenuFlyoutItem { Text = Loc.T("menu.resetBestTimes") };
-        reset.Click += async (_, _) => await ConfirmResetBestTimesAsync();
-        flyout.Items.Add(reset);
-
-        var about = new MenuFlyoutItem { Text = Loc.T("menu.about") };
-        about.Click += async (_, _) => await ShowAboutAsync();
-        flyout.Items.Add(about);
-
-        flyout.ShowAt(SettingsButton);
+            await Launcher.LaunchUriAsync(new Uri("https://github.com/Churroser/winmine"));
+        }
+        catch (Exception ex)
+        {
+            App.LogCrash(ex);
+        }
     }
 
     private async Task ConfirmResetBestTimesAsync()
@@ -736,6 +746,14 @@ public sealed partial class MainWindow : Window
 
     private void RootGrid_KeyDown(object sender, KeyRoutedEventArgs e)
     {
+        // Esc leaves the settings page, the way Back behaves in a Windows 11 app.
+        if (e.Key == VirtualKey.Escape && SettingsView.Visibility == Visibility.Visible)
+        {
+            SelectPage(false);
+            e.Handled = true;
+            return;
+        }
+
         bool control = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control)
             .HasFlag(CoreVirtualKeyStates.Down);
 

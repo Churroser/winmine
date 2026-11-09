@@ -14,6 +14,10 @@
 | --- | --- | --- |
 | ![](docs/screenshots/zh/05-intermediate-playing-dark.png) | ![](docs/screenshots/zh/06-expert-playing-dark.png) | ![](docs/screenshots/zh/08-custom-dialog-light.png) |
 
+| 设置页（浅色） | 设置页（深色） |
+| --- | --- |
+| ![](docs/screenshots/zh/13-settings-light.png) | ![](docs/screenshots/zh/14-settings-dark.png) |
+
 | 日本語 | English | Français | 한국어 |
 | --- | --- | --- | --- |
 | ![](docs/screenshots/zh/09-localized-japanese.png) | ![](docs/screenshots/zh/10-localized-english.png) | ![](docs/screenshots/zh/11-localized-french.png) | ![](docs/screenshots/zh/12-localized-korean.png) |
@@ -87,7 +91,7 @@ signtool sign /fd SHA256 /tr http://timestamp.acs.microsoft.com /td SHA256 `
 | 状态栏 | 剩余雷数、计时器（0–999 秒）、表情按钮（点击重开）、最佳成绩 |
 | 界面 | 自动跟随系统深浅色或手动指定；窗口按棋盘大小自适应并居中；DWM 标题栏按钮配色跟随主题 |
 | 音效 | 翻开 / 泛洪 / 插旗 / 取消插旗 / 快速展开 / 爆炸 / 通关，全部为运行时合成的 PCM 音块；按钮与菜单用 WinUI 自带的 `ElementSoundPlayer`；可在设置里静音 |
-| 设置 | 外观（跟随系统 / 浅色 / 深色）、音效开关、语言、重置最佳成绩、关于 |
+| 设置 | 真正的设置页：左侧 `NavigationView` 窄栏（游戏 / 设置）切换，页内用 Windows 11 设置风格的 `SettingsCard` 分组——主题、音效、语言、最佳成绩、关于（版本号 + 仓库链接）；`Esc` 返回棋盘 |
 | 多语言 | 简体中文、English、日本語、Français、한국어 —— 启动时按 Windows 显示语言自动选择，也可在“设置 → 语言”里固定；选择会持久化，窗口标题一并切换 |
 
 ## 构建与运行
@@ -124,13 +128,15 @@ src/WinMine.Core/            纯 .NET 游戏引擎（无 UI 依赖，可单元�
   AppLanguage.cs             支持的界面语言 + 文化/ISO 解析
   BoardValidationError.cs    与语言无关的棋盘校验结果
 src/WinMine/                 WinUI 3 应用
-  MainWindow.xaml(.cs)       Fluent 布局、标题栏、计时、主题、菜单、本地化接线
+  MainWindow.xaml(.cs)       Fluent 布局、标题栏、计时、主题、导航、本地化接线
   MainWindow.Capture.cs      --capture DIR 截图自检
   MainWindow.SelfTest.cs     --selftest FILE 交互自检
   Controls/BoardView.cs      自绘棋盘面板（输入、动画、焦点环）
   Controls/CellVisual.cs     单格视觉（圆角瓷砖 + 矢量旗/雷/错旗）
   Controls/BoardPalette.cs   双主题调色板
+  Controls/SettingsCard.cs   Windows 11 设置行（图标 + 标题 + 说明 + 右侧控件）
   Views/CustomGameDialog.xaml 自定义棋盘对话框
+  Views/SettingsPage.xaml(.cs) 设置页：外观 / 声音 / 语言 / 数据 / 关于
   Services/SettingsStore.cs  %LOCALAPPDATA%\WinMine\settings.json
   Services/Localization.cs   内置 5 张字符串表 + Loc.T/Loc.F
   Services/GameSounds.cs     运行时合成的 PCM 音效 + winmm PlaySound
@@ -154,14 +160,14 @@ dotnet test tests/WinMine.Core.Tests/WinMine.Core.Tests.csproj
 # 界面自检：驱动真实窗口与棋盘控件，输出 PASS/FAIL 报告
 src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --selftest artifacts/selftest.txt
 
-# 界面截图：把脚本化的 12 个状态渲染成 PNG（不需要可见桌面）；--lang 指定整套截图的界面语言
+# 界面截图：把脚本化的 14 个状态渲染成 PNG（不需要可见桌面）；--lang 指定整套截图的界面语言
 src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --capture artifacts/shots-zh --lang zh-Hans
 src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --capture artifacts/shots-en --lang en
 ```
 
 本页截图放在 [docs/screenshots/zh](docs/screenshots/zh)，英文版 README 用的是 [docs/screenshots/en](docs/screenshots/en)。
 
-`--selftest` 覆盖 85 项检查：首点安全、泛洪范围、插旗/取消插旗/已翻开格拒绝插旗、chord 展开、计时器走动、通关自动插旗与最佳成绩、踩雷揭示全部地雷与拒绝后续操作、三档难度与自定义棋盘的格子数量、窗口不超出工作区、设置 JSON 往返、主题切换，快捷键与“界面里不存在加速键提示源”（专门守住“悬停棋盘冒出 F2 气泡”这个回归），自定义棋盘对话框的输入框状态（全部隐藏上下箭头、取值区间受控），音效（WAV 头合法、时长、880 Hz 音高实测、静音后不输出、音频设备接受播放、WinUI 控件音效可用），以及多语言（5 张表键集一致且无空值、占位符跨语言一致、`zh-CN`/`zh-TW`/`ja`/`fr-CA`/`ko`/`en-GB`/`de-DE`/不变文化都能正确回退、显式选择优先于系统语言、并且窗口标题/标题栏文案/难度页签/棋盘无障碍名/页脚/状态行/对话框与校验文案确实都换成了新语言）。
+`--selftest` 覆盖 96 项检查：首点安全、泛洪范围、插旗/取消插旗/已翻开格拒绝插旗、chord 展开、计时器走动、通关自动插旗与最佳成绩、踩雷揭示全部地雷与拒绝后续操作、三档难度与自定义棋盘的格子数量、窗口不超出工作区、设置 JSON 往返、主题切换，快捷键与“棋盘自身不存在加速键提示源”（专门守住“悬停棋盘冒出 F2 气泡”这个回归），自定义棋盘对话框的输入框状态（全部隐藏上下箭头、取值区间受控），设置页（导航栏两页、切页可见性、控件反映已保存设置、改主题/音效即时生效、文案跟随语言），音效（WAV 头合法、时长、880 Hz 音高实测、静音后不输出、音频设备接受播放、WinUI 控件音效可用），以及多语言（5 张表键集一致且无空值、占位符跨语言一致、`zh-CN`/`zh-TW`/`ja`/`fr-CA`/`ko`/`en-GB`/`de-DE`/不变文化都能正确回退、显式选择优先于系统语言、并且窗口标题/标题栏文案/难度页签/棋盘无障碍名/导航栏/设置页/页脚/状态行/对话框与校验文案确实都换成了新语言）。
 
 自检还会把 8 个合成音效写到报告旁的 `audio/*.wav`，方便直接试听——仓库里也放了一份在 [docs/sounds](docs/sounds)。
 

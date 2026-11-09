@@ -14,6 +14,10 @@ A faithful rebuild of classic Minesweeper on **WinUI 3 / Windows App SDK**, rest
 | --- | --- | --- |
 | ![](docs/screenshots/en/05-intermediate-playing-dark.png) | ![](docs/screenshots/en/06-expert-playing-dark.png) | ![](docs/screenshots/en/08-custom-dialog-light.png) |
 
+| Settings (light) | Settings (dark) |
+| --- | --- |
+| ![](docs/screenshots/en/13-settings-light.png) | ![](docs/screenshots/en/14-settings-dark.png) |
+
 | 日本語 | 简体中文 | Français | 한국어 |
 | --- | --- | --- | --- |
 | ![](docs/screenshots/en/09-localized-japanese.png) | ![](docs/screenshots/en/10-localized-chinese.png) | ![](docs/screenshots/en/11-localized-french.png) | ![](docs/screenshots/en/12-localized-korean.png) |
@@ -87,7 +91,7 @@ See [Sign an MSIX package](https://learn.microsoft.com/windows/msix/package/sign
 | HUD | Mines remaining, timer (0–999 s), face button (click to restart), best time |
 | Appearance | Follows the system theme or an explicit choice; the window sizes itself to the board and re-centres; DWM caption buttons are recoloured to match the theme |
 | Sound | Reveal / flood / flag / unflag / chord / explode / win, all PCM blocks synthesised at runtime; buttons and menus use WinUI's built-in `ElementSoundPlayer`; everything can be muted in Settings |
-| Settings | Appearance (system / light / dark), sound toggle, language, reset best times, about |
+| Settings | A real settings page in a compact `NavigationView` rail (Game / Settings), built from `SettingsCard` rows like Windows 11 Settings: theme, sound, language, best times, about + version and a repository link; `Esc` goes back to the board |
 | Languages | English, 简体中文, 日本語, Français, 한국어 — the UI starts in the Windows display language and can be pinned in Settings → Language (the choice is remembered, the window title included) |
 
 ## Build and run
@@ -124,13 +128,15 @@ src/WinMine.Core/            pure .NET game engine (no UI dependency, unit-testa
   AppLanguage.cs             shipped languages + culture/ISO resolution
   BoardValidationError.cs    language-neutral board validation result
 src/WinMine/                 WinUI 3 app
-  MainWindow.xaml(.cs)       Fluent layout, title bar, timer, theming, menus, localization wiring
+  MainWindow.xaml(.cs)       Fluent layout, title bar, timer, theming, navigation, localization wiring
   MainWindow.Capture.cs      --capture DIR screenshot self-check
   MainWindow.SelfTest.cs     --selftest FILE interaction self-check
   Controls/BoardView.cs      custom-drawn board panel (input, animation, focus ring)
   Controls/CellVisual.cs     per-cell visual (rounded tile + vector flag/mine/wrong-flag)
   Controls/BoardPalette.cs   two-theme palette
+  Controls/SettingsCard.cs   Windows 11 style settings row (icon + title + description + control)
   Views/CustomGameDialog.xaml custom board dialog
+  Views/SettingsPage.xaml(.cs) settings page: appearance / sound / language / data / about
   Services/SettingsStore.cs  %LOCALAPPDATA%\WinMine\settings.json
   Services/Localization.cs   five in-code string tables + Loc.T/Loc.F
   Services/GameSounds.cs     runtime-synthesised PCM + winmm PlaySound
@@ -154,7 +160,7 @@ dotnet test tests/WinMine.Core.Tests/WinMine.Core.Tests.csproj
 # UI self-check: drives the real window and board control, writes a PASS/FAIL report
 src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --selftest artifacts/selftest.txt
 
-# UI screenshots: renders 12 scripted states to PNG (no visible desktop required);
+# UI screenshots: renders 14 scripted states to PNG (no visible desktop required);
 # --lang picks the UI language of the set, so each README gets screenshots in its own language
 src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --capture artifacts/shots-en --lang en
 src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --capture artifacts/shots-zh --lang zh-Hans
@@ -162,7 +168,7 @@ src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --capt
 
 The screenshots used by this page live in [docs/screenshots/en](docs/screenshots/en); the Chinese page uses [docs/screenshots/zh](docs/screenshots/zh).
 
-`--selftest` covers 85 checks: first-click safety, flood-fill extent, flag/unflag/reject-flag-on-revealed, chording, the timer actually ticking, auto-flagging plus best time on a win, all mines revealed and further input ignored after a loss, cell counts for all three presets and for custom boards, the window staying inside the work area, settings JSON round-trip, theme switching, the shortcuts plus "no accelerator key-tip source exists anywhere in the visual tree" (a regression guard for the F2 bubble that used to appear when hovering the board), the custom dialog's number-box state (all spin buttons hidden, values clamped), audio (valid WAV headers, durations, a measured 880 Hz pitch, silence when muted, the audio device accepting playback, and WinUI control sounds being available), and localization (all five tables carry the same keys with no empty entries, placeholders survive translation, `zh-CN`/`zh-TW`/`ja`/`fr-CA`/`ko`/`en-GB`/`de-DE`/invariant all resolve, an explicit choice wins over the OS language, and every surface — window title, title-bar caption, difficulty tabs, board automation name, footer, status line, dialogs and validation text — actually re-renders in the new language).
+`--selftest` covers 96 checks: first-click safety, flood-fill extent, flag/unflag/reject-flag-on-revealed, chording, the timer actually ticking, auto-flagging plus best time on a win, all mines revealed and further input ignored after a loss, cell counts for all three presets and for custom boards, the window staying inside the work area, settings JSON round-trip, theme switching, the shortcuts plus "the board owns no accelerator key-tip source" (a regression guard for the F2 bubble that used to appear when hovering the board), the custom dialog's number-box state (all spin buttons hidden, values clamped), the settings page (its controls reflect the persisted settings and report changes back), audio (valid WAV headers, durations, a measured 880 Hz pitch, silence when muted, the audio device accepting playback, and WinUI control sounds being available), and localization (all five tables carry the same keys with no empty entries, placeholders survive translation, `zh-CN`/`zh-TW`/`ja`/`fr-CA`/`ko`/`en-GB`/`de-DE`/invariant all resolve, an explicit choice wins over the OS language, and every surface — window title, title-bar caption, difficulty tabs, board automation name, nav rail, settings page, footer, status line, dialogs and validation text — actually re-renders in the new language).
 
 The self-check also writes the 8 synthesised sounds to `audio/*.wav` next to the report so you can just listen to them — a copy lives in [docs/sounds](docs/sounds).
 
