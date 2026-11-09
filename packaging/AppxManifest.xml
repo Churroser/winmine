@@ -10,14 +10,14 @@
   <Identity
     Name="Churroser.WinMine"
     Publisher="CN=Churroser"
-    Version="1.2.4.0"
+    Version="1.3.0.0"
     ProcessorArchitecture="x64" />
 
   <Properties>
-    <DisplayName>Minesweeper</DisplayName>
+    <DisplayName>Fluent Sweeper</DisplayName>
     <PublisherDisplayName>Churroser</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
-    <Description>A WinUI 3 remake of the classic Minesweeper, with a Fluent Design UI and five UI languages.</Description>
+    <Description>Classic Minesweeper rebuilt for Windows 11 on WinUI 3: Fluent Design board, compositor motion, five UI languages.</Description>
   </Properties>
 
   <Dependencies>
@@ -35,8 +35,8 @@
   <Applications>
     <Application Id="App" Executable="WinMine.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
-        DisplayName="Minesweeper"
-        Description="A WinUI 3 remake of the classic Minesweeper."
+        DisplayName="Fluent Sweeper"
+        Description="Classic Minesweeper rebuilt for Windows 11 on WinUI 3."
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">

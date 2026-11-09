@@ -1,1 +1,1 @@
-Classic Minesweeper rebuilt on WinUI 3 / Windows App SDK: Fluent Design UI, custom-drawn board, compositor motion, synthesised sound, five UI languages, 112 self-checks.
+Fluent Sweeper — classic Minesweeper rebuilt on WinUI 3 / Windows App SDK: Fluent Design board, compositor motion, synthesised sound, five UI languages, 112 self-checks.

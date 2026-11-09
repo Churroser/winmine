@@ -17,11 +17,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
-    <Product>扫雷</Product>
-    <Company>WinMine</Company>
-    <Version>1.2.4</Version>
-    <AssemblyVersion>1.2.4.0</AssemblyVersion>
-    <FileVersion>1.2.4.0</FileVersion>
+    <Product>Fluent Sweeper</Product>
+    <AssemblyTitle>Fluent Sweeper</AssemblyTitle>
+    <Description>Classic Minesweeper rebuilt for Windows 11 on WinUI 3 / Fluent Design.</Description>
+    <Company>Churroser</Company>
+    <Version>1.3.0</Version>
+    <AssemblyVersion>1.3.0.0</AssemblyVersion>
+    <FileVersion>1.3.0.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>

@@ -92,8 +92,8 @@ public static class Loc
     }
 
     private static readonly Dictionary<string, string> English = Table(
-        "app.title", "Minesweeper",
-        "board.name", "Minesweeper board",
+        "app.title", "Fluent Sweeper",
+        "board.name", "Fluent Sweeper board",
         "button.newGame", "New game (F2)",
         "button.settings", "Settings",
         "button.restart", "Restart (F2)",
@@ -116,7 +116,7 @@ public static class Loc
         "menu.language", "Language",
         "menu.languageSystem", "Use system language",
         "menu.resetBestTimes", "Reset best times",
-        "menu.about", "About Minesweeper",
+        "menu.about", "About Fluent Sweeper",
         "dialog.reset.title", "Reset best times",
         "dialog.reset.body", "Every difficulty's best time will be cleared. This cannot be undone.",
         "dialog.reset.primary", "Reset",
@@ -155,8 +155,8 @@ public static class Loc
         "settings.viewSource", "View on GitHub");
 
     private static readonly Dictionary<string, string> ChineseSimplified = Table(
-        "app.title", "扫雷",
-        "board.name", "扫雷棋盘",
+        "app.title", "Fluent Sweeper",
+        "board.name", "Fluent Sweeper 棋盘",
         "button.newGame", "新游戏 (F2)",
         "button.settings", "设置",
         "button.restart", "重新开始 (F2)",
@@ -179,7 +179,7 @@ public static class Loc
         "menu.language", "语言",
         "menu.languageSystem", "跟随系统",
         "menu.resetBestTimes", "重置最佳成绩",
-        "menu.about", "关于扫雷",
+        "menu.about", "关于 Fluent Sweeper",
         "dialog.reset.title", "重置最佳成绩",
         "dialog.reset.body", "所有难度的最佳成绩都会被清除，此操作无法撤销。",
         "dialog.reset.primary", "重置",
@@ -218,8 +218,8 @@ public static class Loc
         "settings.viewSource", "在 GitHub 上查看");
 
     private static readonly Dictionary<string, string> Japanese = Table(
-        "app.title", "マインスイーパー",
-        "board.name", "マインスイーパーの盤面",
+        "app.title", "Fluent Sweeper",
+        "board.name", "Fluent Sweeper の盤面",
         "button.newGame", "新しいゲーム (F2)",
         "button.settings", "設定",
         "button.restart", "やり直す (F2)",
@@ -242,7 +242,7 @@ public static class Loc
         "menu.language", "言語",
         "menu.languageSystem", "システム言語に従う",
         "menu.resetBestTimes", "ベスト記録を消去",
-        "menu.about", "マインスイーパーについて",
+        "menu.about", "Fluent Sweeper について",
         "dialog.reset.title", "ベスト記録を消去",
         "dialog.reset.body", "すべての難易度のベスト記録が消去されます。この操作は取り消せません。",
         "dialog.reset.primary", "消去",
@@ -281,8 +281,8 @@ public static class Loc
         "settings.viewSource", "GitHub で見る");
 
     private static readonly Dictionary<string, string> French = Table(
-        "app.title", "Démineur",
-        "board.name", "Plateau du démineur",
+        "app.title", "Fluent Sweeper",
+        "board.name", "Plateau de Fluent Sweeper",
         "button.newGame", "Nouvelle partie (F2)",
         "button.settings", "Paramètres",
         "button.restart", "Recommencer (F2)",
@@ -305,7 +305,7 @@ public static class Loc
         "menu.language", "Langue",
         "menu.languageSystem", "Suivre la langue du système",
         "menu.resetBestTimes", "Réinitialiser les records",
-        "menu.about", "À propos du démineur",
+        "menu.about", "À propos de Fluent Sweeper",
         "dialog.reset.title", "Réinitialiser les records",
         "dialog.reset.body", "Les records de tous les niveaux seront effacés. Cette action est irréversible.",
         "dialog.reset.primary", "Réinitialiser",
@@ -344,8 +344,8 @@ public static class Loc
         "settings.viewSource", "Voir sur GitHub");
 
     private static readonly Dictionary<string, string> Korean = Table(
-        "app.title", "지뢰 찾기",
-        "board.name", "지뢰 찾기 보드",
+        "app.title", "Fluent Sweeper",
+        "board.name", "Fluent Sweeper 보드",
         "button.newGame", "새 게임 (F2)",
         "button.settings", "설정",
         "button.restart", "다시 시작 (F2)",
@@ -368,7 +368,7 @@ public static class Loc
         "menu.language", "언어",
         "menu.languageSystem", "시스템 언어 사용",
         "menu.resetBestTimes", "최고 기록 지우기",
-        "menu.about", "지뢰 찾기 정보",
+        "menu.about", "Fluent Sweeper 정보",
         "dialog.reset.title", "최고 기록 지우기",
         "dialog.reset.body", "모든 난이도의 최고 기록이 삭제됩니다. 되돌릴 수 없습니다.",
         "dialog.reset.primary", "지우기",

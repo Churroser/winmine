@@ -99,7 +99,7 @@
             <controls:SettingsCard
                 x:Name="AboutCard"
                 Glyph="&#xE946;"
-                Header="扫雷">
+                Header="Fluent Sweeper">
                 <HyperlinkButton
                     x:Name="SourceLink"
                     Padding="8,2,8,2"

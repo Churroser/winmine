@@ -20,7 +20,7 @@
                 <Image Source="Assets/winmine.png" Width="16" Height="16" />
                 <TextBlock
                     x:Name="TitleText"
-                    Text="Minesweeper"
+                    Text="Fluent Sweeper"
                     FontSize="12"
                     VerticalAlignment="Center"
                     Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
@@ -129,7 +129,7 @@
 
                         <!-- 棋盘 -->
                         <Border x:Name="BoardCard" Style="{StaticResource CardBorderStyle}">
-                            <controls:BoardView x:Name="Board" AutomationProperties.Name="Minesweeper board" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <controls:BoardView x:Name="Board" AutomationProperties.Name="Fluent Sweeper board" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
 
                         <!-- 页脚：最佳成绩 + 状态 -->
