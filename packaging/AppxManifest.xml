@@ -10,7 +10,7 @@
   <Identity
     Name="Churroser.WinMine"
     Publisher="CN=Churroser"
-    Version="1.2.3.0"
+    Version="1.2.4.0"
     ProcessorArchitecture="x64" />
 
   <Properties>

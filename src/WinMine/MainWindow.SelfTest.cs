@@ -561,6 +561,19 @@ public sealed partial class MainWindow
                 $"started {motionBefore} → {CellMotion.Started}");
             Check("合成动画没有抛异常", CellMotion.LastFailure is null, CellMotion.LastFailure ?? "none");
 
+            var blankProbe = Board.ProbeCellVisual((4 * 9) + 4);
+            Check("翻开的格子不淡出（不闪屏）",
+                blankProbe is { } bp && MathF.Abs(bp.Opacity - 1f) < 0.001f && bp.ScaleX <= 1.0001f && bp.ScaleX >= 0.9f,
+                blankProbe is { } bv ? $"opacity={bv.Opacity} scale={bv.ScaleX}" : "no visual");
+            Check("翻开只做缩放与文字弹入，不含透明度动画",
+                !CellMotion.LastRevealProperties.Contains("opacity", StringComparison.OrdinalIgnoreCase),
+                $"[{CellMotion.LastRevealProperties}]");
+
+            int floodBefore = CellMotion.Started;
+            StartNewGame(BoardPreset.Expert, DifficultyLevel.Expert, 20240607);            Board.RevealAt(new Cell(8, 15));
+            Check("大范围泛洪只动画前 90 格", CellMotion.Started - floodBefore <= 90,
+                $"started +{CellMotion.Started - floodBefore}");
+
             int flagBefore = CellMotion.Started;
             var motionFlagCell = FirstHiddenSafeCell();
             if (motionFlagCell is { } motionTarget)

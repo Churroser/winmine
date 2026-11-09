@@ -20,7 +20,7 @@ public sealed class BoardView : Panel
 {
     private const double Gap = 3;
     private const double Pad = 8;
-    private const int MaxAnimatedReveal = 60;
+    private const int MaxAnimatedReveal = 90;
 
     private readonly Border _focusRing = new()
     {
@@ -317,7 +317,9 @@ public sealed class BoardView : Panel
 
     /// <summary>
     /// Reveals ripple outwards: each opened tile starts its settle animation one wave later than
-    /// its neighbour, so a big flood reads as a wave instead of a slab.
+    /// its neighbour, so a big flood reads as a wave instead of a slab. Only the closest
+    /// <see cref="MaxAnimatedReveal"/> tiles animate; the rest appear at once, otherwise the first
+    /// click on a fresh board (which can open over a hundred tiles) turns into a strobe.
     /// </summary>
     private void AnimateReveal(Cell origin, IReadOnlyList<Cell> opened)
     {
@@ -328,11 +330,19 @@ public sealed class BoardView : Panel
 
         Dictionary<int, int>? waves = opened.Count > 1 ? ComputeWaves(origin, opened) : null;
 
-        foreach (var openedCell in opened)
+        var ordered = opened
+            .Select(cell => (Cell: cell, Wave: waves is not null && waves.TryGetValue(IndexOf(cell), out int found) ? found : 0))
+            .OrderBy(entry => entry.Wave)
+            .ToArray();
+
+        for (int i = 0; i < ordered.Length; i++)
         {
-            var visual = _cells[IndexOf(openedCell)];
-            int wave = waves is not null && waves.TryGetValue(IndexOf(openedCell), out int found) ? found : 0;
-            visual.PlayRevealMotion(CellMotion.RevealDelay(wave));
+            if (i >= MaxAnimatedReveal)
+            {
+                break;
+            }
+
+            _cells[IndexOf(ordered[i].Cell)].PlayRevealMotion(CellMotion.RevealDelay(ordered[i].Wave));
         }
     }
 

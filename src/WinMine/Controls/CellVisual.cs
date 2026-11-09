@@ -157,13 +157,20 @@ internal sealed class CellVisual
     };
 
     public void PlayRevealMotion(int delayMilliseconds) =>
-        CellMotion.Reveal(Surface, (float)(_size / 2), delayMilliseconds);
+        CellMotion.Reveal(Surface, Text.Visibility == Visibility.Visible ? Text : null, (float)(_size / 2), delayMilliseconds);
 
     public void PlayFlagMotion() => CellMotion.Pop(VisibleIcon);
 
     public void PlayExplodeMotion() => CellMotion.Explode(Surface, (float)(_size / 2));
 
-    public void StopMotion() => CellMotion.Stop(Surface, (float)(_size / 2));
+    public void StopMotion()
+    {
+        CellMotion.Stop(Surface, (float)(_size / 2));
+        if (Text.Visibility == Visibility.Visible)
+        {
+            CellMotion.Stop(Text, 0f);
+        }
+    }
 
     private void ApplyIconScale(Path path)
     {
