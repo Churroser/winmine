@@ -77,6 +77,20 @@ public sealed partial class SettingsPage : UserControl
 
     internal int LanguageOptionCount => LanguageCombo.Items.Count;
 
+    /// <summary>What the closed theme box currently renders (the ComboBox snapshots this).</summary>
+    internal string ThemeSelectionText => ThemeCombo.SelectionBoxItem as string ?? string.Empty;
+
+    /// <summary>What the closed language box currently renders.</summary>
+    internal string LanguageSelectionText => LanguageCombo.SelectionBoxItem as string ?? string.Empty;
+
+    /// <summary>True when both closed boxes show the text of the item that is actually selected.</summary>
+    internal bool SelectionTextsAreCurrent =>
+        SelectionTextMatches(ThemeCombo) && SelectionTextMatches(LanguageCombo);
+
+    private static bool SelectionTextMatches(ComboBox combo) =>
+        combo.SelectedItem is ComboBoxItem row
+        && Equals(combo.SelectionBoxItem as string, row.Content as string);
+
     /// <summary>Simulates a real pick in the language dropdown (used by --selftest).</summary>
     internal bool SelectLanguageForTest(AppLanguage language)
     {
@@ -161,6 +175,35 @@ public sealed partial class SettingsPage : UserControl
                     : LanguageResolver.NativeName(language);
             }
         }
+
+        RefreshSelectionBox(ThemeCombo);
+        RefreshSelectionBox(LanguageCombo);
+    }
+
+    /// <summary>
+    /// A ComboBox snapshots the selected item's content into <c>SelectionBoxItem</c> when the selection
+    /// changes, so editing the item text alone leaves the closed box showing the old language. Drop the
+    /// selection and put it back to make the box re-render — never while the pop-up is open, because the
+    /// item containers are live then.
+    /// </summary>
+    private void RefreshSelectionBox(ComboBox combo)
+    {
+        if (combo.IsDropDownOpen || combo.SelectedItem is not ComboBoxItem selected)
+        {
+            return;
+        }
+
+        bool previous = _syncing;
+        _syncing = true;
+        try
+        {
+            combo.SelectedItem = null;
+            combo.SelectedItem = selected;
+        }
+        finally
+        {
+            _syncing = previous;
+        }
     }
 
     private static string ThemeLabel(AppTheme theme) => theme switch
@@ -212,8 +255,19 @@ public sealed partial class SettingsPage : UserControl
         LanguageChanged?.Invoke(this, language);
     }
 
-    private void SoundToggle_Toggled(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// A language switch that happens while the popup is open cannot re-render the closed box yet
+    /// (its containers are live); once the popup closes we can safely re-select and re-render.
+    /// </summary>
+    private void Combo_DropDownClosed(object sender, object e)
     {
+        if (sender is ComboBox combo)
+        {
+            RefreshSelectionBox(combo);
+        }
+    }
+
+    private void SoundToggle_Toggled(object sender, RoutedEventArgs e)    {
         if (_syncing)
         {
             return;

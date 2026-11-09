@@ -31,6 +31,7 @@
                 <ComboBox
                     x:Name="ThemeCombo"
                     MinWidth="184"
+                    DropDownClosed="Combo_DropDownClosed"
                     SelectionChanged="ThemeCombo_SelectionChanged" />
             </controls:SettingsCard>
 
@@ -67,6 +68,7 @@
                 <ComboBox
                     x:Name="LanguageCombo"
                     MinWidth="184"
+                    DropDownClosed="Combo_DropDownClosed"
                     SelectionChanged="LanguageCombo_SelectionChanged" />
             </controls:SettingsCard>
 

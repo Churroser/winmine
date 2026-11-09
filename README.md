@@ -28,15 +28,15 @@ The latest build is on the [Releases](https://github.com/Churroser/winmine/relea
 
 | Asset | What it is | Prerequisites |
 | --- | --- | --- |
-| `WinMine-1.2.1-win-x64.zip` | Portable folder — unzip anywhere and run `WinMine.exe` | none (self-contained: .NET and the Windows App SDK are bundled) |
-| `WinMine-1.2.1-x64.msix` | Installed app: Start-menu entry plus a `WinMine.exe` command alias | the bundled certificate must be trusted once, see below |
+| `WinMine-1.2.2-win-x64.zip` | Portable folder — unzip anywhere and run `WinMine.exe` | none (self-contained: .NET and the Windows App SDK are bundled) |
+| `WinMine-1.2.2-x64.msix` | Installed app: Start-menu entry plus a `WinMine.exe` command alias | the bundled certificate must be trusted once, see below |
 | `WinMine-msix-selfsigned.cer` | The self-signed code-signing certificate the MSIX is signed with | — |
 
 The MSIX is signed with a self-signed certificate, so Windows asks you to trust it first. In an **elevated** PowerShell:
 
 ```powershell
 Import-Certificate -FilePath .\WinMine-msix-selfsigned.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople
-Add-AppxPackage .\WinMine-1.2.1-x64.msix              # install
+Add-AppxPackage .\WinMine-1.2.2-x64.msix              # install
 ```
 
 `TrustedPeople` is the store AppX actually checks for a signing certificate; the package's chain also has to end in a trusted root, which is why the machine store (not the per-user one) is required — a non-elevated `Import-Certificate` to `Cert:\CurrentUser\TrustedPeople` still fails with `0x800B0109: the root certificate of the signature in the app package or bundle must be trusted`. The GUI equivalent is: double-click the `.cer` → **Install Certificate** → **Local machine** → **Place all certificates in the following store** → **Trusted People**.
@@ -76,7 +76,7 @@ For Azure Artifact Signing, SignTool needs its dlib plugin instead (`winget inst
 
 ```powershell
 signtool sign /fd SHA256 /tr http://timestamp.acs.microsoft.com /td SHA256 `
-  /dlib "<dlib>\x64\Azure.CodeSigning.Dlib.dll" /dmdf metadata.json WinMine-1.2.1-x64.msix
+  /dlib "<dlib>\x64\Azure.CodeSigning.Dlib.dll" /dmdf metadata.json WinMine-1.2.2-x64.msix
 ```
 
 See [Sign an MSIX package](https://learn.microsoft.com/windows/msix/package/signing-package-overview) for the full matrix.

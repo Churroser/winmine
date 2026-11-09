@@ -484,6 +484,26 @@ public sealed partial class MainWindow
                 SettingsView.ThemeHeader == Loc.T("settings.theme") && SettingsView.LanguageOptionCount == LanguageResolver.Supported.Count + 1,
                 $"{SettingsView.ThemeHeader}/{SettingsView.LanguageOptionCount}");
 
+            // The ComboBox snapshots the selected item's text, so the closed box used to keep the old
+            // language after a switch. The dropped selection must also survive the refresh.
+            // The ComboBox snapshots the selected item's text, so the closed box used to keep the old
+            // language after a switch.
+            CaptureLanguage(AppLanguage.Japanese);
+            SettingsView.SyncFrom(_settings);
+            SettingsView.ApplyLocalization();
+            await Task.Delay(60);
+            string expectedThemeLabel = _settings.Theme switch
+            {
+                AppTheme.Light => Loc.T("menu.themeLight"),
+                AppTheme.Dark => Loc.T("menu.themeDark"),
+                _ => Loc.T("menu.themeSystem"),
+            };
+            Check("语言切换后下拉框显示文本也跟随语言",
+                SettingsView.SelectionTextsAreCurrent
+                && SettingsView.ThemeSelectionText == expectedThemeLabel
+                && SettingsView.LanguageSelectionText == LanguageResolver.NativeName(_settings.Language),
+                $"theme=[{SettingsView.ThemeSelectionText}] want=[{expectedThemeLabel}] lang=[{SettingsView.LanguageSelectionText}] current={SettingsView.SelectionTextsAreCurrent}");
+
             // Picking a language from the dropdown used to tear down the ComboBox item collection
             // from inside its own SelectionChanged handler, which crashed the process.
             Check("下拉里有全部语言选项", SettingsView.SelectLanguageForTest(AppLanguage.Korean), "korean found");
@@ -506,6 +526,10 @@ public sealed partial class MainWindow
             Check("展开下拉时选语言也不崩溃",
                 pickedInPopup && _settings.Language == AppLanguage.Japanese && Loc.Current == AppLanguage.Japanese,
                 $"{_settings.Language}/{Loc.Current}");
+            Check("下拉关闭后显示文本已刷新",
+                SettingsView.SelectionTextsAreCurrent
+                && SettingsView.LanguageSelectionText == LanguageResolver.NativeName(AppLanguage.Japanese),
+                $"[{SettingsView.LanguageSelectionText}] current={SettingsView.SelectionTextsAreCurrent}");
 
             SelectPage(false);
             await Task.Delay(60);
