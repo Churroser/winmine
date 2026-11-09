@@ -119,8 +119,21 @@ public sealed class BoardView : Panel
     {
         foreach (var cell in _cells)
         {
+            cell.StopMotion();
             ApplyCellVisual(cell);
         }
+    }
+
+    /// <summary>Composition state of one tile; --selftest uses it to prove motion was reset.</summary>
+    internal (float Opacity, float ScaleX)? ProbeCellVisual(int index)
+    {
+        if (index < 0 || index >= _cells.Length)
+        {
+            return null;
+        }
+
+        var visual = Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.GetElementVisual(_cells[index].Surface);
+        return (visual.Opacity, visual.Scale.X);
     }
 
     public void RevealAt(Cell cell) => Execute(cell, board => board.Reveal(cell));
@@ -276,6 +289,11 @@ public sealed class BoardView : Panel
         if (result.Status is GameStatus.Won or GameStatus.Lost)
         {
             RefreshAll();
+
+            if (result.Status is GameStatus.Lost && _board.ExplodedAt is { } mine)
+            {
+                _cells[IndexOf(mine)].PlayExplodeMotion();
+            }
         }
         else
         {
@@ -285,37 +303,79 @@ public sealed class BoardView : Panel
             }
 
             ApplyCellVisual(_cells[IndexOf(cell)]);
-            AnimateReveal(result.Revealed);
+
+            if (result.Outcome is MoveOutcome.Flagged)
+            {
+                _cells[IndexOf(cell)].PlayFlagMotion();
+            }
+
+            AnimateReveal(cell, result.Revealed);
         }
 
         MoveCompleted?.Invoke(this, result);
     }
 
-    private void AnimateReveal(IReadOnlyList<Cell> opened)
+    /// <summary>
+    /// Reveals ripple outwards: each opened tile starts its settle animation one wave later than
+    /// its neighbour, so a big flood reads as a wave instead of a slab.
+    /// </summary>
+    private void AnimateReveal(Cell origin, IReadOnlyList<Cell> opened)
     {
-        if (opened.Count is 0 or > MaxAnimatedReveal)
+        if (opened.Count is 0)
         {
             return;
         }
 
-        var storyboard = new Storyboard();
-        for (int i = 0; i < opened.Count; i++)
+        Dictionary<int, int>? waves = opened.Count > 1 ? ComputeWaves(origin, opened) : null;
+
+        foreach (var openedCell in opened)
         {
-            var element = _cells[IndexOf(opened[i])].Root;
-            element.Opacity = 0.2;
-            var animation = new DoubleAnimation
-            {
-                To = 1,
-                Duration = new Duration(TimeSpan.FromMilliseconds(130)),
-                BeginTime = TimeSpan.FromMilliseconds(Math.Min(i * 4, 80)),
-                EnableDependentAnimation = true,
-            };
-            Storyboard.SetTarget(animation, element);
-            Storyboard.SetTargetProperty(animation, "Opacity");
-            storyboard.Children.Add(animation);
+            var visual = _cells[IndexOf(openedCell)];
+            int wave = waves is not null && waves.TryGetValue(IndexOf(openedCell), out int found) ? found : 0;
+            visual.PlayRevealMotion(CellMotion.RevealDelay(wave));
+        }
+    }
+
+    private Dictionary<int, int> ComputeWaves(Cell origin, IReadOnlyList<Cell> opened)
+    {
+        var waves = new Dictionary<int, int>(opened.Count);
+        if (_board is null)
+        {
+            return waves;
         }
 
-        storyboard.Begin();
+        var open = new HashSet<int>(opened.Count);
+        foreach (var cell in opened)
+        {
+            open.Add(IndexOf(cell));
+        }
+
+        var queue = new Queue<int>();
+        int originIndex = IndexOf(origin);
+        if (open.Contains(originIndex))
+        {
+            waves[originIndex] = 0;
+            queue.Enqueue(originIndex);
+        }
+
+        while (queue.Count > 0)
+        {
+            int current = queue.Dequeue();
+            int next = waves[current] + 1;
+            var cell = _cells[current].Cell;
+
+            foreach (var neighbour in _board.Neighbours(cell))
+            {
+                int index = IndexOf(neighbour);
+                if (open.Contains(index) && !waves.ContainsKey(index))
+                {
+                    waves[index] = next;
+                    queue.Enqueue(index);
+                }
+            }
+        }
+
+        return waves;
     }
 
     private Cell? HitTestCell(Point position)

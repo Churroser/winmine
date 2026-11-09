@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using System.Globalization;
 using Windows.System;
+using WinMine.Controls;
 using WinMine.Core;
 using WinMine.Services;
 
@@ -546,6 +547,53 @@ public sealed partial class MainWindow
 
             CaptureLanguage(AppLanguage.ChineseSimplified);
             ApplyThemeSetting();
+            StartNewGame(BoardPreset.Beginner, DifficultyLevel.Beginner, 20240607);
+
+            // 17 · reveal / flag / explode motion
+            Check("揭示动画按波次错开", CellMotion.RevealDelay(0) == 0 && CellMotion.RevealDelay(3) == 48
+                && CellMotion.RevealDelay(40) == 192,
+                $"0/3/40 → {CellMotion.RevealDelay(0)}/{CellMotion.RevealDelay(3)}/{CellMotion.RevealDelay(40)} ms");
+
+            int motionBefore = CellMotion.Started;
+            StartNewGame(BoardPreset.Beginner, DifficultyLevel.Beginner, 20240607);
+            Board.RevealAt(new Cell(4, 4));
+            Check("翻开时启动了合成动画", CellMotion.Started > motionBefore,
+                $"started {motionBefore} → {CellMotion.Started}");
+            Check("合成动画没有抛异常", CellMotion.LastFailure is null, CellMotion.LastFailure ?? "none");
+
+            int flagBefore = CellMotion.Started;
+            var motionFlagCell = FirstHiddenSafeCell();
+            if (motionFlagCell is { } motionTarget)
+            {
+                Board.FlagAt(motionTarget);
+                Check("插旗时旗子弹入", CellMotion.Started > flagBefore,
+                    $"started {flagBefore} → {CellMotion.Started}");
+            }
+            else
+            {
+                Check("插旗时旗子弹入", false, "no hidden cell left");
+            }
+
+            int explodeBefore = CellMotion.Started;
+            StartNewGame(BoardPreset.Beginner, DifficultyLevel.Beginner, 20240607);
+            Board.RevealAt(new Cell(4, 4));
+            if (FirstMine() is { } motionMine)
+            {
+                Board.RevealAt(motionMine);
+                Check("踩雷时雷格脉冲", CellMotion.Started > explodeBefore,
+                    $"status={Board.Board?.Status} started {explodeBefore} → {CellMotion.Started}");
+            }
+            else
+            {
+                Check("踩雷时雷格脉冲", false, "no mine");
+            }
+
+            Board.RefreshAll();
+            var probe = Board.ProbeCellVisual(0);
+            Check("重绘后动画状态被复位",
+                probe is { } p && MathF.Abs(p.Opacity - 1f) < 0.001f && MathF.Abs(p.ScaleX - 1f) < 0.001f,
+                probe is { } v ? $"opacity={v.Opacity} scale={v.ScaleX}" : "no visual");
+
             StartNewGame(BoardPreset.Beginner, DifficultyLevel.Beginner, 20240607);
         }
         catch (Exception ex)

@@ -27,6 +27,7 @@ internal sealed class CellVisual
     private Path? _mine;
     private Path? _cross;
     private double _iconScale = 1;
+    private double _size = 30;
 
     public CellVisual(Cell cell)
     {
@@ -49,14 +50,23 @@ internal sealed class CellVisual
             FontWeight = FontWeights.SemiBold,
         };
 
+        // Root keeps the UIElement.CenterPoint used by the pressed-shrink effect. The reveal motion
+        // animates Surface instead: GetElementVisual refuses to hand out a visual for an element that
+        // has CenterPoint in use, so the animated element has to be a clean child.
+        Surface = new Grid { IsHitTestVisible = false };
+        Surface.Children.Add(Tile);
+        Surface.Children.Add(Text);
+
         Root = new Grid { IsHitTestVisible = false };
-        Root.Children.Add(Tile);
-        Root.Children.Add(Text);
+        Root.Children.Add(Surface);
     }
 
     public Cell Cell { get; }
 
     public Grid Root { get; }
+
+    /// <summary>The layer the reveal/explode motion animates (no CenterPoint of its own).</summary>
+    public Grid Surface { get; }
 
     public Border Tile { get; }
 
@@ -66,6 +76,7 @@ internal sealed class CellVisual
 
     public void SetSize(double cellSize)
     {
+        _size = cellSize;
         Root.Width = cellSize;
         Root.Height = cellSize;
         Root.CenterPoint = new System.Numerics.Vector3((float)(cellSize / 2), (float)(cellSize / 2), 0);
@@ -135,6 +146,24 @@ internal sealed class CellVisual
     }
 
     public void ClearText() => Text.Visibility = Visibility.Collapsed;
+
+    /// <summary>The icon currently on show, if any (used to pop a fresh flag).</summary>
+    private Path? VisibleIcon => Icon switch
+    {
+        CellIcon.Flag => _flag,
+        CellIcon.Mine => _mine,
+        CellIcon.WrongFlag => _cross,
+        _ => null,
+    };
+
+    public void PlayRevealMotion(int delayMilliseconds) =>
+        CellMotion.Reveal(Surface, (float)(_size / 2), delayMilliseconds);
+
+    public void PlayFlagMotion() => CellMotion.Pop(VisibleIcon);
+
+    public void PlayExplodeMotion() => CellMotion.Explode(Surface, (float)(_size / 2));
+
+    public void StopMotion() => CellMotion.Stop(Surface, (float)(_size / 2));
 
     private void ApplyIconScale(Path path)
     {
