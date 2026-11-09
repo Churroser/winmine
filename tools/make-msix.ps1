@@ -13,7 +13,7 @@
 # see https://learn.microsoft.com/azure/artifact-signing/how-to-signing-integrations
 param(
     [string]$Configuration = "Release",
-    [string]$Version = "1.1.0",
+    [string]$Version = "1.2.0",
     [string]$OutputDir = "artifacts\release",
     [switch]$SkipBuild,
     [switch]$TestInstall,
