@@ -1,6 +1,10 @@
-# Replaces every asset of an existing release with the files in artifacts\release.
+# Replaces every asset of an existing release with files from a directory.
 # ASCII only: Windows PowerShell 5.1 parses BOM-less scripts as ANSI.
-param([string]$Tag = "v1.2.0")
+param(
+    [string]$Tag = "v1.2.0",
+    [string]$Version = "1.2.0",
+    [string]$FromDir = "artifacts\release"
+)
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
@@ -10,7 +14,8 @@ $token = ($cred | Select-String '^password=').Line -replace '^password=', ''
 if (-not $token) { throw "no github token" }
 $headers = @("Authorization: Bearer $token", "X-GitHub-Api-Version: 2022-11-28")
 $repo = "Churroser/winmine"
-$out = Join-Path $root "artifacts\release"
+$out = if ([IO.Path]::IsPathRooted($FromDir)) { $FromDir } else { Join-Path $root $FromDir }
+if (-not (Test-Path $out)) { throw "missing asset directory $out" }
 $tmp = Join-Path $root "artifacts\api-tmp"
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
 
@@ -29,17 +34,20 @@ $code = Invoke-Api -Method GET -Url "https://api.github.com/repos/$repo/releases
 $release = [Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($relFile)) | ConvertFrom-Json
 Write-Host ("release id={0} tag={1} assets={2}" -f $release.id, $release.tag_name, $release.assets.Count)
 
+$assets = @("WinMine-$Version-x64.msix", "WinMine-$Version-win-x64.zip", "WinMine-msix-selfsigned.cer", "SHA256SUMS.txt")
+foreach ($name in $assets) {
+    if (-not (Test-Path (Join-Path $out $name))) { throw "missing $name in $out" }
+}
+
 foreach ($asset in @($release.assets)) {
     $delFile = Join-Path $tmp "del.json"
     $code = Invoke-Api -Method DELETE -Url "https://api.github.com/repos/$repo/releases/assets/$($asset.id)" -OutFile $delFile -ContentType $null
     Write-Host ("deleted {0} -> HTTP {1}" -f $asset.name, $code)
 }
 
-$assets = @("WinMine-1.2.0-x64.msix", "WinMine-1.2.0-win-x64.zip", "WinMine-msix-selfsigned.cer", "SHA256SUMS.txt")
 $types = @{ ".msix" = "application/octet-stream"; ".zip" = "application/zip"; ".cer" = "application/x-x509-ca-cert"; ".txt" = "text/plain" }
 foreach ($name in $assets) {
     $path = Join-Path $out $name
-    if (-not (Test-Path $path)) { throw "missing $name" }
     $url = "https://uploads.github.com/repos/$repo/releases/$($release.id)/assets?name=$name"
     $assetOut = Join-Path $tmp ("up-" + ($name -replace '[^A-Za-z0-9.]', '_') + ".json")
     $code = Invoke-Api -Method POST -Url $url -BodyFile $path -OutFile $assetOut -ContentType $types[[IO.Path]::GetExtension($name)]

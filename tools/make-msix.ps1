@@ -16,6 +16,7 @@ param(
     [string]$Version = "1.3.0",
     [string]$OutputDir = "artifacts\release",
     [switch]$SkipBuild,
+[switch]$NoTrim,
     [switch]$TestInstall,
     [switch]$KeepInstalled,
     [string]$CertPassword = "winmine-msix",
@@ -48,6 +49,15 @@ if (-not $SkipBuild) {
         -p:SelfContained=true -p:WindowsAppSDKSelfContained=true -p:WindowsPackageType=MSIX `
         -p:Version=$Version -o $layout
     if ($LASTEXITCODE -ne 0) { throw "dotnet build failed ($LASTEXITCODE)" }
+
+    # Drop the payload the app never touches (ONNX/DirectML/AI bindings, symbol store,
+    # crash dumps). Both the MSIX and the portable ZIP are built from this layout, so the
+    # download shrinks from ~233 MB to ~168 MB. See tools\package-trim.ps1 for the list of
+    # files that must stay.
+    if (-not $NoTrim) {
+        . (Join-Path $PSScriptRoot "package-trim.ps1")
+        Remove-OptionalPayload -Layout $layout
+    }
 }
 
 foreach ($required in @("WinMine.exe", "WinMine.pri", "Microsoft.ui.xaml.dll")) {

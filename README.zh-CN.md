@@ -32,6 +32,8 @@
 | `WinMine-1.3.0-x64.msix` | 安装包：开始菜单项 **Fluent Sweeper** + `WinMine.exe` 命令别名 | 需先信任随包的证书，见下 |
 | `WinMine-msix-selfsigned.cer` | 给 MSIX 签名用的自签代码签名证书 | — |
 
+体积：ZIP 约 65 MB，MSIX 约 66 MB。两者都自带 .NET 与 Windows App SDK，但把 Windows App SDK 附带、扫雷永远不会加载的 AI/ONNX/TensorRT 那一坨裁掉了（见 `tools/package-trim.ps1`，单这一步就少 ~62 MB）。同一个版本上架微软商店时约 43 MB，因为商店包可以让 Windows 把 `Microsoft.WindowsAppRuntime.2` 当框架包安装，而不用打进包里。
+
 MSIX 用的是自签证书（这里没有付费代码签名证书），所以 Windows 会在安装前提示。用**管理员** PowerShell 信任一次即可：
 
 ```powershell
@@ -147,9 +149,13 @@ tests/WinMine.Core.Tests/    54 个 xunit 测试（规则、设置、语言解�
 tools/make-icon.ps1          生成 Assets/winmine.png + winmine.ico
 tools/make-package-assets.ps1  从图标派生 MSIX 需要的磁贴/启动图 PNG
 tools/make-msix.ps1          构建、打包、签名 MSIX（并输出便携 ZIP）；-TestInstall 会实测安装
+tools/package-trim.ps1       裁掉应用永不加载的 AI/ONNX/DirectML 负载（62 MB）
+tools/make-store-package.ps1 生成 Partner Center 上传包：Windows App SDK 走框架依赖、不打签
+tools/publish-release.ps1    创建 GitHub release 并上传资产
 tools/set-repo-meta.ps1      通过 REST API 设置仓库 description / topics
 tools/repo-description.txt   给上面那个脚本读的 UTF-8 描述文案
 packaging/AppxManifest.xml   MSIX 身份、磁贴资源、命令别名、runFullTrust 能力
+packaging/AppxManifest.Store.xml  商店版清单：身份 8D36016F.FluentSweeper + WindowsAppRuntime.2 依赖
 packaging/Assets/            StoreLogo / Square44x44Logo / Square150x150Logo / Wide310x150Logo / SplashScreen
 ```
 

@@ -32,6 +32,8 @@ The latest build is on the [Releases](https://github.com/Churroser/winmine/relea
 | `WinMine-1.3.0-x64.msix` | Installed app: Start-menu entry **Fluent Sweeper** plus a `WinMine.exe` command alias | the bundled certificate must be trusted once, see below |
 | `WinMine-msix-selfsigned.cer` | The self-signed code-signing certificate the MSIX is signed with | — |
 
+Sizes: the ZIP is ~65 MB, the MSIX ~66 MB. Both ship .NET and the Windows App SDK, and the payload is trimmed of the AI/ONNX/TensorRT DLLs the Windows App SDK brings along but a Minesweeper never loads (`tools/package-trim.ps1` — that alone removed ~62 MB). The same build published to the Microsoft Store is ~43 MB, because a Store package lets Windows install `Microsoft.WindowsAppRuntime.2` as a framework package instead of bundling it.
+
 The MSIX is signed with a self-signed certificate, so Windows asks you to trust it first. In an **elevated** PowerShell:
 
 ```powershell
@@ -147,9 +149,13 @@ tests/WinMine.Core.Tests/    54 xunit tests (game rules, settings, language reso
 tools/make-icon.ps1          generates Assets/winmine.png + winmine.ico
 tools/make-package-assets.ps1  derives the MSIX tile/splash PNGs from the icon
 tools/make-msix.ps1          builds, packs, signs the MSIX (+ portable ZIP); -TestInstall smoke-tests it
+tools/package-trim.ps1       drops the AI/ONNX/DirectML payload the app never loads (62 MB)
+tools/make-store-package.ps1 builds the Partner Center upload: framework-dependent on the Windows App SDK, unsigned
+tools/publish-release.ps1    creates the GitHub release and uploads the assets
 tools/set-repo-meta.ps1      sets repo description/topics through the REST API
 tools/repo-description.txt   UTF-8 description text that script feeds to the API
 packaging/AppxManifest.xml   MSIX identity, tile assets, execution alias, runFullTrust capability
+packaging/AppxManifest.Store.xml  same for Partner Center: identity 8D36016F.FluentSweeper + WindowsAppRuntime.2 dependency
 packaging/Assets/            StoreLogo / Square44x44Logo / Square150x150Logo / Wide310x150Logo / SplashScreen
 ```
 
