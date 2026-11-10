@@ -34,6 +34,8 @@
 
 体积：ZIP 约 65 MB，MSIX 约 66 MB。两者都自带 .NET 与 Windows App SDK，但把 Windows App SDK 附带、扫雷永远不会加载的 AI/ONNX/TensorRT 那一坨裁掉了（见 `tools/package-trim.ps1`，单这一步就少 ~62 MB）。同一个版本上架微软商店时约 43 MB，因为商店包可以让 Windows 把 `Microsoft.WindowsAppRuntime.2` 当框架包安装，而不用打进包里。
 
+隐私：没有账号、没有遥测、没有服务器。主题、语言、棋盘与最佳成绩存在 `%LOCALAPPDATA%\WinMine\settings.json`，只有出错时才多写一个 `crash.log`，两个文件都不会离开本机。完整说明见 [docs/privacy.zh-CN.md](docs/privacy.zh-CN.md)。
+
 MSIX 用的是自签证书（这里没有付费代码签名证书），所以 Windows 会在安装前提示。用**管理员** PowerShell 信任一次即可：
 
 ```powershell
@@ -146,6 +148,8 @@ src/WinMine/                 WinUI 3 应用
   Services/GameSounds.cs     运行时合成的 PCM 音效 + winmm PlaySound
   Services/UiSounds.cs       WinUI 自带 ElementSoundPlayer 包装（Invoke/MoveNext…）
 tests/WinMine.Core.Tests/    54 个 xunit 测试（规则、设置、语言解析）
+docs/privacy.zh-CN.md        隐私政策（中文）：存了什么、从不发送什么
+docs/privacy.md              同一份政策的英文版
 tools/make-icon.ps1          生成 Assets/winmine.png + winmine.ico
 tools/make-package-assets.ps1  从图标派生 MSIX 需要的磁贴/启动图 PNG
 tools/make-msix.ps1          构建、打包、签名 MSIX（并输出便携 ZIP）；-TestInstall 会实测安装

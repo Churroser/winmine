@@ -34,6 +34,8 @@ The latest build is on the [Releases](https://github.com/Churroser/winmine/relea
 
 Sizes: the ZIP is ~65 MB, the MSIX ~66 MB. Both ship .NET and the Windows App SDK, and the payload is trimmed of the AI/ONNX/TensorRT DLLs the Windows App SDK brings along but a Minesweeper never loads (`tools/package-trim.ps1` — that alone removed ~62 MB). The same build published to the Microsoft Store is ~43 MB, because a Store package lets Windows install `Microsoft.WindowsAppRuntime.2` as a framework package instead of bundling it.
 
+Privacy: the game has no account, no telemetry and no server. It stores your theme, language, board and best times in `%LOCALAPPDATA%\WinMine\settings.json`, and writes `crash.log` there only when something fails — neither file ever leaves the machine. The full statement is [docs/privacy.md](docs/privacy.md).
+
 The MSIX is signed with a self-signed certificate, so Windows asks you to trust it first. In an **elevated** PowerShell:
 
 ```powershell
@@ -146,6 +148,8 @@ src/WinMine/                 WinUI 3 app
   Services/GameSounds.cs     runtime-synthesised PCM + winmm PlaySound
   Services/UiSounds.cs       wrapper over WinUI's ElementSoundPlayer (Invoke/MoveNext/…)
 tests/WinMine.Core.Tests/    54 xunit tests (game rules, settings, language resolution)
+docs/privacy.md               privacy statement (English) — what the app stores and what it never sends
+docs/privacy.zh-CN.md         the same statement in Chinese
 tools/make-icon.ps1          generates Assets/winmine.png + winmine.ico
 tools/make-package-assets.ps1  derives the MSIX tile/splash PNGs from the icon
 tools/make-msix.ps1          builds, packs, signs the MSIX (+ portable ZIP); -TestInstall smoke-tests it
