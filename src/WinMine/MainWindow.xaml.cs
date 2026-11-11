@@ -49,6 +49,7 @@ public sealed partial class MainWindow : Window
         ConfigureChrome();
 
         RootGrid.Loaded += RootGrid_Loaded;
+        RootGrid.SizeChanged += RootGrid_SizeChanged;
         RootGrid.ActualThemeChanged += (_, _) => ApplyCaptionButtonColors();
 
         // Window-level shortcuts are handled here instead of with KeyboardAccelerator objects:
@@ -408,10 +409,72 @@ public sealed partial class MainWindow : Window
         int pixelWidth = (int)Math.Ceiling(contentWidth * scale);
         int pixelHeight = (int)Math.Ceiling(contentHeight * scale);
 
+        _pendingClientSize = new SizeInt32(pixelWidth, pixelHeight);
+        _pendingClientSizeSince = DateTime.UtcNow;
+        _pendingClientSizeCorrected = false;
+
         AppWindow.ResizeClient(new SizeInt32(pixelWidth, pixelHeight));
         AppWindow.Move(new PointInt32(
             work.X + Math.Max(0, (work.Width - pixelWidth) / 2),
             work.Y + Math.Max(0, (work.Height - pixelHeight) / 2)));
+
+        // SizeChanged can fire inside ResizeClient, before the pending state is trusted, so a
+        // low-priority pass after the message loop re-checks whatever actually landed.
+        DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, TryCorrectClientSize);
+    }
+
+    private SizeInt32? _pendingClientSize;
+    private DateTime _pendingClientSizeSince;
+    private bool _pendingClientSizeCorrected;
+
+    private void RootGrid_SizeChanged(object sender, SizeChangedEventArgs e) => TryCorrectClientSize();
+
+    /// <summary>
+    /// With an extended title bar the shell sometimes reports a client rect that still has the
+    /// caption band folded into its height, so the requested size lands ~32 px too tall and the
+    /// board floats above an empty strip. Compare the real layout with what we asked for and
+    /// resize by the difference — exactly once per fit, never while the user resizes.
+    /// </summary>
+    private void TryCorrectClientSize()
+    {
+        if (_pendingClientSize is not { } want || _pendingClientSizeCorrected)
+        {
+            return;
+        }
+
+        if ((DateTime.UtcNow - _pendingClientSizeSince).TotalSeconds > 2)
+        {
+            _pendingClientSize = null;
+            return;
+        }
+
+        double scale = RootGrid.XamlRoot?.RasterizationScale ?? 1;
+        int actualWidth = (int)Math.Round(RootGrid.ActualWidth * scale);
+        int actualHeight = (int)Math.Round(RootGrid.ActualHeight * scale);
+        if (actualWidth <= 0 || actualHeight <= 0)
+        {
+            return; // layout has not run yet, the SizeChanged pass will pick it up
+        }
+
+        if (Math.Abs(actualWidth - want.Width) <= 1 && Math.Abs(actualHeight - want.Height) <= 1)
+        {
+            _pendingClientSize = null;
+            return;
+        }
+
+        _pendingClientSizeCorrected = true;
+        _pendingClientSize = null;
+        var corrected = new SizeInt32(
+            Math.Max(320, want.Width - (actualWidth - want.Width)),
+            Math.Max(240, want.Height - (actualHeight - want.Height)));
+        AppWindow.ResizeClient(corrected);
+
+        // Keep the window centered after the height correction.
+        DisplayArea area = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary);
+        RectInt32 work = area.WorkArea;
+        AppWindow.Move(new PointInt32(
+            work.X + Math.Max(0, (work.Width - corrected.Width) / 2),
+            work.Y + Math.Max(0, (work.Height - corrected.Height) / 2)));
     }
 
     // ── 主题与标题栏配色 ────────────────────────────────────────────────────────
