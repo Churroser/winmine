@@ -22,6 +22,8 @@ Fluent Sweeper is a faithful rebuild of classic Minesweeper on **WinUI 3 / Windo
 | --- | --- | --- | --- |
 | ![](docs/screenshots/en/09-localized-japanese.png) | ![](docs/screenshots/en/10-localized-chinese.png) | ![](docs/screenshots/en/11-localized-french.png) | ![](docs/screenshots/en/12-localized-korean.png) |
 
+![Chord preview](docs/screenshots/en/15-chord-preview.png)
+
 ## Download
 
 The latest build is on the [Releases](https://github.com/Churroser/winmine/releases/latest) page:
@@ -90,6 +92,7 @@ See [Sign an MSIX package](https://learn.microsoft.com/windows/msix/package/sign
 | Area | What it does |
 | --- | --- |
 | Gameplay | Left-click to reveal · right-click to flag · middle-click or re-click a revealed number to chord · the first click is always safe (3×3 protected area) |
+| Chord preview | Press and hold on a revealed number (left or middle button) and every hidden, unflagged neighbour sinks in — you see exactly what the chord will open; release on the same tile to fire it, drag off to cancel. Revealed and flagged neighbours stay untouched |
 | Keyboard | Arrow keys move the cursor; Space/Enter reveals or chords; `F` flags; `F2` / `Ctrl+N` restarts; `Ctrl+1/2/3` switches Beginner/Intermediate/Expert (no focus conflicts, and hovering the board never pops a key-tip bubble) |
 | Difficulty | Beginner 9×9/10 mines, Intermediate 16×16/40 mines, Expert 16×30/99 mines, custom (3–40 columns, 3–30 rows; number boxes have no spin buttons — type a value and it is clamped to range) |
 | HUD | Mines remaining, timer (0–999 s), face button (click to restart), best time |
@@ -172,7 +175,7 @@ dotnet test tests/WinMine.Core.Tests/WinMine.Core.Tests.csproj
 # UI self-check: drives the real window and board control, writes a PASS/FAIL report
 src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --selftest artifacts/selftest.txt
 
-# UI screenshots: renders 14 scripted states to PNG (no visible desktop required);
+# UI screenshots: renders 15 scripted states to PNG (no visible desktop required);
 # --lang picks the UI language of the set, so each README gets screenshots in its own language
 src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --capture artifacts/shots-en --lang en
 src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --capture artifacts/shots-zh --lang zh-Hans
@@ -180,7 +183,7 @@ src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --capt
 
 The screenshots used by this page live in [docs/screenshots/en](docs/screenshots/en); the Chinese page uses [docs/screenshots/zh](docs/screenshots/zh).
 
-`--selftest` covers 112 checks: first-click safety, flood-fill extent, flag/unflag/reject-flag-on-revealed, chording, the timer actually ticking, auto-flagging plus best time on a win, all mines revealed and further input ignored after a loss, cell counts for all three presets and for custom boards, the window staying inside the work area, settings JSON round-trip, theme switching, the shortcuts plus "the board owns no accelerator key-tip source" (a regression guard for the F2 bubble that used to appear when hovering the board), the custom dialog's number-box state (all spin buttons hidden, values clamped), the settings page (its controls reflect the persisted settings and report changes back, the about row shows the version under the app name, and the collapsed combo boxes repaint their selection text after a language switch, including when the drop-down is open), motion (wave delays are monotonic and capped, reveal/flag/explode animations actually start on the compositor, none of them throws — `ElementCompositionPreview` refuses a visual for an element that has `CenterPoint` in use — the reveal never animates opacity so a flood cannot blink, only the closest 90 tiles of a huge flood animate, and a refresh puts every tile back to opacity 1 / scale 1), audio (valid WAV headers, durations, a measured 880 Hz pitch, silence when muted, the audio device accepting playback, and WinUI control sounds being available), and localization (all five tables carry the same keys with no empty entries, placeholders survive translation, `zh-CN`/`zh-TW`/`ja`/`fr-CA`/`ko`/`en-GB`/`de-DE`/invariant all resolve, an explicit choice wins over the OS language, and every surface — window title, title-bar caption, difficulty tabs, board automation name, nav rail, settings page, footer, status line, dialogs and validation text — actually re-renders in the new language).
+`--selftest` covers 117 checks: first-click safety, flood-fill extent, flag/unflag/reject-flag-on-revealed, chording, the chord preview (holding on a number sinks exactly its hidden unflagged neighbours, revealed and flagged ones are skipped, releasing restores them, and a hidden tile previews nothing), the timer actually ticking, auto-flagging plus best time on a win, all mines revealed and further input ignored after a loss, cell counts for all three presets and for custom boards, the window staying inside the work area, settings JSON round-trip, theme switching, the shortcuts plus "the board owns no accelerator key-tip source" (a regression guard for the F2 bubble that used to appear when hovering the board), the custom dialog's number-box state (all spin buttons hidden, values clamped), the settings page (its controls reflect the persisted settings and report changes back, the about row shows the version under the app name, and the collapsed combo boxes repaint their selection text after a language switch, including when the drop-down is open), motion (wave delays are monotonic and capped, reveal/flag/explode animations actually start on the compositor, none of them throws — `ElementCompositionPreview` refuses a visual for an element that has `CenterPoint` in use — the reveal never animates opacity so a flood cannot blink, only the closest 90 tiles of a huge flood animate, and a refresh puts every tile back to opacity 1 / scale 1), audio (valid WAV headers, durations, a measured 880 Hz pitch, silence when muted, the audio device accepting playback, and WinUI control sounds being available), and localization (all five tables carry the same keys with no empty entries, placeholders survive translation, `zh-CN`/`zh-TW`/`ja`/`fr-CA`/`ko`/`en-GB`/`de-DE`/invariant all resolve, an explicit choice wins over the OS language, and every surface — window title, title-bar caption, difficulty tabs, board automation name, nav rail, settings page, footer, status line, dialogs and validation text — actually re-renders in the new language).
 
 The self-check also writes the 8 synthesised sounds to `audio/*.wav` next to the report so you can just listen to them — a copy lives in [docs/sounds](docs/sounds).
 

@@ -608,6 +608,79 @@ public sealed partial class MainWindow
                 probe is { } v ? $"opacity={v.Opacity} scale={v.ScaleX}" : "no visual");
 
             StartNewGame(BoardPreset.Beginner, DifficultyLevel.Beginner, 20240607);
+
+            // 18 · chord preview: pressing a revealed number sinks its hidden neighbours in
+            Board.RevealAt(new Cell(4, 4));
+
+            var grid = Board.Board;
+            Cell? previewOrigin = null;
+            if (grid is not null)
+            {
+                foreach (var candidate in grid.AllCells())
+                {
+                    var candidateInfo = grid.GetCell(candidate);
+                    if (!candidateInfo.IsRevealed || candidateInfo.AdjacentMines == 0)
+                    {
+                        continue;
+                    }
+
+                    bool hasHidden = grid.Neighbours(candidate)
+                        .Any(n => !grid.GetCell(n).IsRevealed && !grid.GetCell(n).IsFlagged);
+                    if (hasHidden)
+                    {
+                        previewOrigin = candidate;
+                        break;
+                    }
+                }
+            }
+
+            if (grid is not null && previewOrigin is { } origin)
+            {
+                var hiddenNeighbours = grid.Neighbours(origin)
+                    .Where(n => !grid.GetCell(n).IsRevealed && !grid.GetCell(n).IsFlagged)
+                    .ToArray();
+
+                Board.PreviewChordForTest(origin);
+                Check("在数字格上按下会凸显周围未翻开的格子",
+                    Board.ChordPreviewCount == hiddenNeighbours.Length
+                        && hiddenNeighbours.All(Board.IsChordPreviewing),
+                    $"preview={Board.ChordPreviewCount} expected={hiddenNeighbours.Length}");
+
+                var sample = hiddenNeighbours[0];
+                int sampleIndex = (sample.Row * Board.Columns) + sample.Column;
+                Check("凸显的格子看起来是被按下的",
+                    Board.ProbeCellRootScale(sampleIndex) < 0.99f,
+                    $"scale={Board.ProbeCellRootScale(sampleIndex):0.00}");
+
+                Check("已翻开的邻居不参与凸显",
+                    !grid.Neighbours(origin).Where(n => grid.GetCell(n).IsRevealed).Any(Board.IsChordPreviewing),
+                    "revealed neighbours skipped");
+
+                Board.ClearChordPreviewForTest();
+                Check("松开后凸显消失",
+                    Board.ChordPreviewCount == 0
+                        && MathF.Abs(Board.ProbeCellRootScale(sampleIndex) - 1f) < 0.001f,
+                    $"count={Board.ChordPreviewCount} scale={Board.ProbeCellRootScale(sampleIndex):0.00}");
+            }
+            else
+            {
+                Check("在数字格上按下会凸显周围未翻开的格子", false, "no numbered cell with hidden neighbours");
+            }
+
+            StartNewGame(BoardPreset.Beginner, DifficultyLevel.Beginner, 20240607);
+            if (FirstHiddenSafeCell() is { } hiddenCell)
+            {
+                Board.PreviewChordForTest(hiddenCell);
+                Check("未翻开的格子按下不凸显周围", Board.ChordPreviewCount == 0,
+                    $"preview={Board.ChordPreviewCount}");
+                Board.ClearChordPreviewForTest();
+            }
+            else
+            {
+                Check("未翻开的格子按下不凸显周围", false, "no hidden cell");
+            }
+
+            StartNewGame(BoardPreset.Beginner, DifficultyLevel.Beginner, 20240607);
         }
         catch (Exception ex)
         {

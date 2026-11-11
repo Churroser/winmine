@@ -22,6 +22,8 @@
 | --- | --- | --- | --- |
 | ![](docs/screenshots/zh/09-localized-japanese.png) | ![](docs/screenshots/zh/10-localized-english.png) | ![](docs/screenshots/zh/11-localized-french.png) | ![](docs/screenshots/zh/12-localized-korean.png) |
 
+![和弦预览](docs/screenshots/zh/15-chord-preview.png)
+
 ## 下载安装
 
 最新版本在 [Releases](https://github.com/Churroser/winmine/releases/latest) 页面：
@@ -90,6 +92,7 @@ signtool sign /fd SHA256 /tr http://timestamp.acs.microsoft.com /td SHA256 `
 | 分类 | 内容 |
 | --- | --- |
 | 玩法 | 左键翻开 · 右键插旗 · 中键或再次点击已翻开的数字快速展开（chord）· 第一次点击永远安全（3×3 保护区） |
+| 和弦预览 | 在已翻开的数字上按住（左键或中键），它周围所有未翻开、未插旗的格子会同时“陷下去”，一眼看清这次和弦会翻开什么；在同一格松开即执行，移开则取消，已翻开与已插旗的邻居保持原样 |
 | 键盘 | 方向键移动；空格/回车翻开或展开；`F` 插旗；`F2` / `Ctrl+N` 重开；`Ctrl+1/2/3` 切换初级/中级/高级（无焦点冲突，鼠标悬停棋盘不会弹出按键气泡） |
 | 难度 | 初级 9×9/10 雷、中级 16×16/40 雷、高级 16×30/99 雷、自定义（列 3–40，行 3–30；输入框无上下箭头，直接键入数字，取值自动夹紧） |
 | 状态栏 | 剩余雷数、计时器（0–999 秒）、表情按钮（点击重开）、最佳成绩 |
@@ -172,14 +175,14 @@ dotnet test tests/WinMine.Core.Tests/WinMine.Core.Tests.csproj
 # 界面自检：驱动真实窗口与棋盘控件，输出 PASS/FAIL 报告
 src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --selftest artifacts/selftest.txt
 
-# 界面截图：把脚本化的 14 个状态渲染成 PNG（不需要可见桌面）；--lang 指定整套截图的界面语言
+# 界面截图：把脚本化的 15 个状态渲染成 PNG（不需要可见桌面）；--lang 指定整套截图的界面语言
 src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --capture artifacts/shots-zh --lang zh-Hans
 src/WinMine/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/WinMine.exe --capture artifacts/shots-en --lang en
 ```
 
 本页截图放在 [docs/screenshots/zh](docs/screenshots/zh)，英文版 README 用的是 [docs/screenshots/en](docs/screenshots/en)。
 
-`--selftest` 覆盖 112 项检查：首点安全、泛洪范围、插旗/取消插旗/已翻开格拒绝插旗、chord 展开、计时器走动、通关自动插旗与最佳成绩、踩雷揭示全部地雷与拒绝后续操作、三档难度与自定义棋盘的格子数量、窗口不超出工作区、设置 JSON 往返、主题切换，快捷键与“棋盘自身不存在加速键提示源”（专门守住“悬停棋盘冒出 F2 气泡”这个回归），自定义棋盘对话框的输入框状态（全部隐藏上下箭头、取值区间受控），设置页（导航栏两页、切页可见性、控件反映已保存设置、改主题/音效即时生效、关于行版本号在应用名下方、切换语言后收起状态的下拉框显示文本也刷新，展开下拉时同样不崩），动效（波次延迟单调且有上限、翻开/插旗/踩雷三种合成动画确实启动、没有抛异常——`ElementCompositionPreview` 对使用了 `CenterPoint` 的元素会拒绝给出 visual——翻开不做透明度动画因而不会闪屏、超大泛洪只动画最近 90 格、以及重绘后每格回到 opacity 1 / scale 1），音效（WAV 头合法、时长、880 Hz 音高实测、静音后不输出、音频设备接受播放、WinUI 控件音效可用），以及多语言（5 张表键集一致且无空值、占位符跨语言一致、`zh-CN`/`zh-TW`/`ja`/`fr-CA`/`ko`/`en-GB`/`de-DE`/不变文化都能正确回退、显式选择优先于系统语言、并且窗口标题/标题栏文案/难度页签/棋盘无障碍名/导航栏/设置页/页脚/状态行/对话框与校验文案确实都换成了新语言）。
+`--selftest` 覆盖 117 项检查：首点安全、泛洪范围、插旗/取消插旗/已翻开格拒绝插旗、chord 展开、和弦预览（在数字格上按住只凸显它未翻开、未插旗的邻居，已翻开与已插旗的邻居不参与，松开后恢复原样，未翻开的格子按下不产生凸显）、计时器走动、通关自动插旗与最佳成绩、踩雷揭示全部地雷与拒绝后续操作、三档难度与自定义棋盘的格子数量、窗口不超出工作区、设置 JSON 往返、主题切换，快捷键与“棋盘自身不存在加速键提示源”（专门守住“悬停棋盘冒出 F2 气泡”这个回归），自定义棋盘对话框的输入框状态（全部隐藏上下箭头、取值区间受控），设置页（导航栏两页、切页可见性、控件反映已保存设置、改主题/音效即时生效、关于行版本号在应用名下方、切换语言后收起状态的下拉框显示文本也刷新，展开下拉时同样不崩），动效（波次延迟单调且有上限、翻开/插旗/踩雷三种合成动画确实启动、没有抛异常——`ElementCompositionPreview` 对使用了 `CenterPoint` 的元素会拒绝给出 visual——翻开不做透明度动画因而不会闪屏、超大泛洪只动画最近 90 格、以及重绘后每格回到 opacity 1 / scale 1），音效（WAV 头合法、时长、880 Hz 音高实测、静音后不输出、音频设备接受播放、WinUI 控件音效可用），以及多语言（5 张表键集一致且无空值、占位符跨语言一致、`zh-CN`/`zh-TW`/`ja`/`fr-CA`/`ko`/`en-GB`/`de-DE`/不变文化都能正确回退、显式选择优先于系统语言、并且窗口标题/标题栏文案/难度页签/棋盘无障碍名/导航栏/设置页/页脚/状态行/对话框与校验文案确实都换成了新语言）。
 
 自检还会把 8 个合成音效写到报告旁的 `audio/*.wav`，方便直接试听——仓库里也放了一份在 [docs/sounds](docs/sounds)。
 

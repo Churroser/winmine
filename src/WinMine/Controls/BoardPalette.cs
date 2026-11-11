@@ -17,6 +17,11 @@ internal sealed class BoardColors
 
     public required Brush HiddenStroke { get; init; }
 
+    /// <summary>Fill of a tile that is about to be opened by a chord.</summary>
+    public required Brush ChordPreview { get; init; }
+
+    public required Brush ChordPreviewStroke { get; init; }
+
     public required Brush Revealed { get; init; }
 
     public required Brush RevealedGrid { get; init; }
@@ -56,6 +61,8 @@ internal static class BoardPalette
         HiddenHover = Brush("#F2F8FF"),
         HiddenPressed = Brush("#E1EDFA"),
         HiddenStroke = Brush("#D6D6D6"),
+        ChordPreview = Brush("#C8DDF5"),
+        ChordPreviewStroke = Brush("#96B8DF"),
         Revealed = Brush("#E9E9E9"),
         RevealedGrid = Brush("#DADADA"),
         RevealedHover = Brush("#E0E0E0"),
@@ -80,6 +87,8 @@ internal static class BoardPalette
         HiddenHover = Brush("#3F3F3F"),
         HiddenPressed = Brush("#4E4E4E"),
         HiddenStroke = Brush("#4A4A4A"),
+        ChordPreview = Brush("#2B4A6B"),
+        ChordPreviewStroke = Brush("#4E7CA8"),
         Revealed = Brush("#1F1F1F"),
         RevealedGrid = Brush("#2E2E2E"),
         RevealedHover = Brush("#282828"),

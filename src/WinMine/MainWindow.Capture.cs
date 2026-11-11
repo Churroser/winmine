@@ -149,6 +149,62 @@ public sealed partial class MainWindow
 
         SelectPage(false);
         await Task.Delay(200);
+
+        // 15 · chord preview: hold on a revealed number and its hidden neighbours sink in
+        SetCaptureTheme(AppTheme.Light);
+        Cell? previewOrigin = null;
+        foreach (int reveals in new[] { 10, 8, 6, 4, 3 })
+        {
+            StartNewGame(BoardPreset.Beginner, DifficultyLevel.Beginner, 20240607);
+            PlayDemo(new Cell(4, 4), seed: 20240607, reveals: reveals, flags: 2);
+            await Task.Delay(650);
+            if (Board.Board?.Status is GameStatus.Playing && FindChordPreviewOrigin() is { } candidate)
+            {
+                previewOrigin = candidate;
+                break;
+            }
+        }
+
+        if (previewOrigin is { } origin)
+        {
+            Board.PreviewChordForTest(origin);
+            await Task.Delay(260);
+            await SaveShotAsync(Path.Combine(directory, "15-chord-preview.png"));
+            Board.ClearChordPreviewForTest();
+        }
+
+        await Task.Delay(120);
+    }
+
+    /// <summary>The revealed number with the most hidden neighbours — what a chord would open.</summary>
+    private Cell? FindChordPreviewOrigin()
+    {
+        var grid = Board.Board;
+        if (grid is null)
+        {
+            return null;
+        }
+
+        Cell? best = null;
+        int bestCount = 0;
+        foreach (var cell in grid.AllCells())
+        {
+            var info = grid.GetCell(cell);
+            if (!info.IsRevealed || info.AdjacentMines == 0)
+            {
+                continue;
+            }
+
+            int hidden = grid.Neighbours(cell)
+                .Count(n => !grid.GetCell(n).IsRevealed && !grid.GetCell(n).IsFlagged);
+            if (hidden > bestCount)
+            {
+                best = cell;
+                bestCount = hidden;
+            }
+        }
+
+        return best;
     }
 
     /// <summary>File-name fragment for a language's screenshot (English, not "english").</summary>

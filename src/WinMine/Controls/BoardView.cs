@@ -36,6 +36,9 @@ public sealed class BoardView : Panel
     private double _cellSize = 30;
     private int _hovered = -1;
     private int _pressed = -1;
+    private int _previewOrigin = -1;
+    private readonly HashSet<int> _previewCells = new();
+    private bool _pressChordOnly;
     private Cell _cursor;
     private bool _cursorVisible;
 
@@ -87,6 +90,8 @@ public sealed class BoardView : Panel
         _board = board;
         _hovered = -1;
         _pressed = -1;
+        _previewOrigin = -1;
+        _previewCells.Clear();
         _cursor = new Cell(board.Rows / 2, board.Columns / 2);
         _cursorVisible = false;
         RebuildCells();
@@ -212,7 +217,8 @@ public sealed class BoardView : Panel
         var info = _board.GetCell(visual.Cell);
         bool gameOver = _board.Status is GameStatus.Won or GameStatus.Lost;
         bool hovered = !gameOver && index == _hovered;
-        bool pressed = !gameOver && index == _pressed && index == _hovered;
+        bool previewed = !gameOver && _previewCells.Contains(index);
+        bool pressed = !gameOver && (previewed || (index == _pressed && index == _hovered));
         bool exploded = _board.ExplodedAt is { } mine && mine == visual.Cell;
 
         visual.Root.Opacity = 1;
@@ -252,10 +258,18 @@ public sealed class BoardView : Panel
         }
 
         visual.ClearText();
-        visual.Tile.Background = pressed
-            ? _colors.HiddenPressed
-            : hovered ? _colors.HiddenHover : _colors.Hidden;
-        visual.Tile.BorderBrush = _colors.HiddenStroke;
+        if (previewed)
+        {
+            visual.Tile.Background = _colors.ChordPreview;
+            visual.Tile.BorderBrush = _colors.ChordPreviewStroke;
+        }
+        else
+        {
+            visual.Tile.Background = pressed
+                ? _colors.HiddenPressed
+                : hovered ? _colors.HiddenHover : _colors.Hidden;
+            visual.Tile.BorderBrush = _colors.HiddenStroke;
+        }
 
         if (info.IsFlagged)
         {
@@ -267,7 +281,11 @@ public sealed class BoardView : Panel
             visual.ClearIcon();
         }
 
-        if (pressed)
+        if (previewed)
+        {
+            visual.Root.Scale = new Vector3(0.9f, 0.9f, 1f);
+        }
+        else if (pressed)
         {
             visual.Root.Scale = new Vector3(0.94f, 0.94f, 1f);
         }
@@ -442,24 +460,19 @@ public sealed class BoardView : Panel
             return;
         }
 
-        if (point.Properties.IsMiddleButtonPressed)
+        if (point.Properties.IsMiddleButtonPressed || point.Properties.IsLeftButtonPressed)
         {
-            ChordAt(cell.Value);
+            // Classic behaviour: pressing on a revealed number sinks its hidden neighbours in,
+            // releasing on the same tile fires the chord. The middle button is chord-only.
+            _pressChordOnly = point.Properties.IsMiddleButtonPressed;
+            _hovered = IndexOf(cell.Value);
+            _pressed = _hovered;
+            BeginChordPreview(cell.Value);
+            ApplyCellVisual(_cells[_pressed]);
+            PressStateChanged?.Invoke(this, true);
+            CapturePointer(e.Pointer);
             e.Handled = true;
-            return;
         }
-
-        if (!point.Properties.IsLeftButtonPressed)
-        {
-            return;
-        }
-
-        _hovered = IndexOf(cell.Value);
-        _pressed = _hovered;
-        ApplyCellVisual(_cells[_pressed]);
-        PressStateChanged?.Invoke(this, true);
-        CapturePointer(e.Pointer);
-        e.Handled = true;
     }
 
     private void OnPointerReleased(object sender, PointerRoutedEventArgs e)
@@ -471,6 +484,9 @@ public sealed class BoardView : Panel
 
         int pressed = _pressed;
         _pressed = -1;
+        bool chordOnly = _pressChordOnly;
+        _pressChordOnly = false;
+        EndChordPreview();
         ReleasePointerCapture(e.Pointer);
 
         var point = e.GetCurrentPoint(this);
@@ -486,7 +502,7 @@ public sealed class BoardView : Panel
             {
                 ChordAt(cell.Value);
             }
-            else
+            else if (!chordOnly)
             {
                 RevealAt(cell.Value);
             }
@@ -506,6 +522,19 @@ public sealed class BoardView : Panel
 
         var cell = HitTestCell(e.GetCurrentPoint(this).Position);
         int index = cell is null ? -1 : IndexOf(cell.Value);
+
+        if (_pressed >= 0)
+        {
+            if (index == _pressed)
+            {
+                BeginChordPreview(_cells[_pressed].Cell);
+            }
+            else
+            {
+                EndChordPreview();
+            }
+        }
+
         if (index == _hovered)
         {
             return;
@@ -543,8 +572,85 @@ public sealed class BoardView : Panel
 
         int pressed = _pressed;
         _pressed = -1;
+        _pressChordOnly = false;
+        EndChordPreview();
         ApplyCellVisual(_cells[pressed]);
     }
+
+    /// <summary>
+    /// Sinks every hidden, unflagged neighbour of <paramref name="origin"/> so the player can
+    /// see what a chord would open. Mirrors the classic game's press-and-hold highlight.
+    /// </summary>
+    private void BeginChordPreview(Cell origin)
+    {
+        if (_board is null)
+        {
+            return;
+        }
+
+        int originIndex = IndexOf(origin);
+        if (_previewOrigin == originIndex)
+        {
+            return;
+        }
+
+        EndChordPreview();
+
+        var info = _board.GetCell(origin);
+        if (!info.IsRevealed || info.AdjacentMines == 0)
+        {
+            return;
+        }
+
+        _previewOrigin = originIndex;
+        foreach (var neighbour in _board.Neighbours(origin))
+        {
+            var neighbourInfo = _board.GetCell(neighbour);
+            if (neighbourInfo.IsRevealed || neighbourInfo.IsFlagged)
+            {
+                continue;
+            }
+
+            int index = IndexOf(neighbour);
+            if (_previewCells.Add(index))
+            {
+                ApplyCellVisual(_cells[index]);
+            }
+        }
+    }
+
+    private void EndChordPreview()
+    {
+        if (_previewCells.Count == 0)
+        {
+            _previewOrigin = -1;
+            return;
+        }
+
+        // Clear the set first: ApplyCellVisual reads it to decide the pressed look.
+        int[] stale = _previewCells.ToArray();
+        _previewCells.Clear();
+        _previewOrigin = -1;
+
+        foreach (int index in stale)
+        {
+            if (index >= 0 && index < _cells.Length)
+            {
+                ApplyCellVisual(_cells[index]);
+            }
+        }
+    }
+
+    internal int ChordPreviewCount => _previewCells.Count;
+
+    internal bool IsChordPreviewing(Cell cell) => _previewCells.Contains(IndexOf(cell));
+
+    internal void PreviewChordForTest(Cell cell) => BeginChordPreview(cell);
+
+    internal void ClearChordPreviewForTest() => EndChordPreview();
+
+    internal float ProbeCellRootScale(int index) =>
+        index >= 0 && index < _cells.Length ? _cells[index].Root.Scale.X : 1f;
 
     private void OnHolding(object sender, HoldingRoutedEventArgs e)
     {
