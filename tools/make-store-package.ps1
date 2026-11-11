@@ -22,7 +22,7 @@
 #                                                                   # Add-AppxPackage smoke test
 param(
     [string]$Configuration = "Release",
-    [string]$Version = "1.3.0",
+    [string]$Version = "1.4.0",
     [string]$OutputDir = "artifacts\store",
     [switch]$SkipBuild,
     [switch]$SelfContainedRuntime,

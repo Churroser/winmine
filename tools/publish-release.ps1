@@ -1,5 +1,17 @@
-# Publishes the 1.3.0 release and uploads its assets through the REST API.
+# Publishes a release and uploads its assets through the REST API.
 # ASCII only: Windows PowerShell 5.1 parses BOM-less scripts as ANSI.
+#
+#   tools\publish-release.ps1 -Version 1.4.0
+#
+# Expects artifacts\release to already hold the assets and artifacts\release-notes-<version>.md
+# to hold the body. The GitHub token comes from the credential helper git already uses.
+param(
+    [string]$Version = "1.4.0",
+    [string]$Title = "",
+    [string]$NotesPath = "",
+    [switch]$SkipCreate
+)
+
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
@@ -9,14 +21,18 @@ $token = ($cred | Select-String '^password=').Line -replace '^password=', ''
 if (-not $token) { throw "no github token from git credential fill" }
 $headers = @("Authorization: Bearer $token", "X-GitHub-Api-Version: 2022-11-28")
 $repo = "Churroser/winmine"
-$tag = "v1.3.0"
+$tag = "v$Version"
 $out = Join-Path $root "artifacts\release"
 $tmp = Join-Path $root "artifacts\api-tmp"
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
 
+if (-not $Title) { $Title = "Fluent Sweeper $Version / WinUI 3" }
+if (-not $NotesPath) { $NotesPath = Join-Path $root "artifacts\release-notes-$Version.md" }
+if (-not (Test-Path $NotesPath)) { throw "missing release notes $NotesPath" }
+
 function Invoke-Api {
     param([string]$Method, [string]$Url, [string]$BodyFile, [string]$OutFile, [string]$ContentType = "application/json")
-    $args = @("-s", "-m", "600", "-X", $Method, "-o", $OutFile, "-w", "%{http_code}")
+    $args = @("-s", "-m", "900", "-X", $Method, "-o", $OutFile, "-w", "%{http_code}")
     foreach ($h in $headers) { $args += @("-H", $h) }
     if ($ContentType) { $args += @("-H", "Content-Type: $ContentType") }
     if ($BodyFile) { $args += @("--data-binary", "@$BodyFile") }
@@ -25,26 +41,49 @@ function Invoke-Api {
     return $code
 }
 
-$bodyText = [IO.File]::ReadAllText((Join-Path $root "artifacts\release-notes-1.3.0.md"), [Text.Encoding]::UTF8)
-$payload = [ordered]@{ tag_name = $tag; name = "Fluent Sweeper 1.3.0 / WinUI 3"; body = $bodyText; draft = $false; prerelease = $false } |
-    ConvertTo-Json -Depth 4
-$bodyFile = Join-Path $tmp "release.json"
-[IO.File]::WriteAllText($bodyFile, $payload, (New-Object Text.UTF8Encoding $false))
+$assets = @("WinMine-$Version-x64.msix", "WinMine-$Version-win-x64.zip", "WinMine-msix-selfsigned.cer", "SHA256SUMS.txt")
+foreach ($name in $assets) {
+    if (-not (Test-Path (Join-Path $out $name))) { throw "missing asset $name" }
+}
 
-$respFile = Join-Path $tmp "release-response.json"
-$code = Invoke-Api -Method POST -Url "https://api.github.com/repos/$repo/releases" -BodyFile $bodyFile -OutFile $respFile
-$text = [Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($respFile))
-Write-Host "create release -> HTTP $code"
-if ($code -notmatch '^20') { Write-Host $text; throw "release creation failed" }
-$release = $text | ConvertFrom-Json
+if ($SkipCreate) {
+    $lookup = Join-Path $tmp "release-lookup.json"
+    $code = Invoke-Api -Method GET -Url "https://api.github.com/repos/$repo/releases/tags/$tag" -OutFile $lookup
+    $text = [Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($lookup))
+    Write-Host "lookup $tag -> HTTP $code"
+    if ($code -notmatch '^20') { Write-Host $text; throw "release $tag not found" }
+    $release = $text | ConvertFrom-Json
+}
+else {
+    $bodyText = [IO.File]::ReadAllText($NotesPath, [Text.Encoding]::UTF8)
+    $payload = [ordered]@{ tag_name = $tag; name = $Title; body = $bodyText; draft = $false; prerelease = $false } |
+        ConvertTo-Json -Depth 4
+    $bodyFile = Join-Path $tmp "release.json"
+    [IO.File]::WriteAllText($bodyFile, $payload, (New-Object Text.UTF8Encoding $false))
+
+    $respFile = Join-Path $tmp "release-response.json"
+    $code = Invoke-Api -Method POST -Url "https://api.github.com/repos/$repo/releases" -BodyFile $bodyFile -OutFile $respFile
+    $text = [Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($respFile))
+    Write-Host "create release -> HTTP $code"
+    if ($code -notmatch '^20') { Write-Host $text; throw "release creation failed" }
+    $release = $text | ConvertFrom-Json
+}
+
 Write-Host ("release id={0} tag={1}" -f $release.id, $release.tag_name)
 Write-Host ("html_url={0}" -f $release.html_url)
 
-$assets = @("WinMine-1.3.0-x64.msix", "WinMine-1.3.0-win-x64.zip", "WinMine-msix-selfsigned.cer", "SHA256SUMS.txt")
+# Drop assets that are already on the release so a re-run replaces them.
+foreach ($existing in $release.assets) {
+    if ($assets -contains $existing.name) {
+        $del = Join-Path $tmp ("delete-" + $existing.id + ".json")
+        $code = Invoke-Api -Method DELETE -Url "https://api.github.com/repos/$repo/releases/assets/$($existing.id)" -OutFile $del
+        Write-Host ("removed old asset {0} -> HTTP {1}" -f $existing.name, $code)
+    }
+}
+
 $types = @{ ".msix" = "application/octet-stream"; ".zip" = "application/zip"; ".cer" = "application/x-x509-ca-cert"; ".txt" = "text/plain" }
 foreach ($name in $assets) {
     $path = Join-Path $out $name
-    if (-not (Test-Path $path)) { throw "missing asset $name" }
     $type = $types[[IO.Path]::GetExtension($name)]
     $url = "https://uploads.github.com/repos/$repo/releases/$($release.id)/assets?name=$name"
     $assetOut = Join-Path $tmp ("asset-" + ($name -replace '[^A-Za-z0-9.]', '_') + ".json")
@@ -67,6 +106,7 @@ $checked = [Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($checkFile)) 
 Write-Host "verify -> HTTP $code, draft=$($checked.draft), assets=$($checked.assets.Count)"
 foreach ($asset in $checked.assets) {
     $local = Join-Path $out $asset.name
+    if (-not (Test-Path $local)) { Write-Host ("  {0,-32} local file missing" -f $asset.name); continue }
     $localHash = "sha256:" + (Get-FileHash $local -Algorithm SHA256).Hash.ToLower()
     Write-Host ("  {0,-32} server={1} match={2}" -f $asset.name, $asset.digest, ($asset.digest -eq $localHash))
 }

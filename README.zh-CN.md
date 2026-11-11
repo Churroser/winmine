@@ -30,8 +30,8 @@
 
 | 文件 | 是什么 | 前置条件 |
 | --- | --- | --- |
-| `WinMine-1.3.0-win-x64.zip` | 便携版：解压到任意目录，双击 `WinMine.exe` | 无（自包含：.NET 与 Windows App SDK 都在包里） |
-| `WinMine-1.3.0-x64.msix` | 安装包：开始菜单项 **Fluent Sweeper** + `WinMine.exe` 命令别名 | 需先信任随包的证书，见下 |
+| `WinMine-1.4.0-win-x64.zip` | 便携版：解压到任意目录，双击 `WinMine.exe` | 无（自包含：.NET 与 Windows App SDK 都在包里） |
+| `WinMine-1.4.0-x64.msix` | 安装包：开始菜单项 **Fluent Sweeper** + `WinMine.exe` 命令别名 | 需先信任随包的证书，见下 |
 | `WinMine-msix-selfsigned.cer` | 给 MSIX 签名用的自签代码签名证书 | — |
 
 体积：ZIP 约 65 MB，MSIX 约 66 MB。两者都自带 .NET 与 Windows App SDK，但把 Windows App SDK 附带、扫雷永远不会加载的 AI/ONNX/TensorRT 那一坨裁掉了（见 `tools/package-trim.ps1`，单这一步就少 ~62 MB）。同一个版本上架微软商店时约 43 MB，因为商店包可以让 Windows 把 `Microsoft.WindowsAppRuntime.2` 当框架包安装，而不用打进包里。
@@ -42,7 +42,7 @@ MSIX 用的是自签证书（这里没有付费代码签名证书），所以 Wi
 
 ```powershell
 Import-Certificate -FilePath .\WinMine-msix-selfsigned.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople
-Add-AppxPackage .\WinMine-1.3.0-x64.msix              # 安装
+Add-AppxPackage .\WinMine-1.4.0-x64.msix              # 安装
 ```
 
 装证书要进**受信任人（TrustedPeople）**，这是 AppX 真正校验签名证书的库；同时签名链必须能落到一个受信任的根，所以只能写机器级库——往 `Cert:\CurrentUser\TrustedPeople` 里导入（非管理员）仍然会报 `0x800B0109：应用包或捆绑包中的签名的根证书必须是受信任的证书`。图形界面的等价操作：双击 `.cer` → **安装证书** → **本地计算机** → **将所有证书放入下列存储** → **受信任人**。
@@ -82,7 +82,7 @@ powershell -File tools\make-msix.ps1 -SkipBuild -CertificatePath .\mycert.pfx   
 
 ```powershell
 signtool sign /fd SHA256 /tr http://timestamp.acs.microsoft.com /td SHA256 `
-  /dlib "<dlib>\x64\Azure.CodeSigning.Dlib.dll" /dmdf metadata.json WinMine-1.3.0-x64.msix
+  /dlib "<dlib>\x64\Azure.CodeSigning.Dlib.dll" /dmdf metadata.json WinMine-1.4.0-x64.msix
 ```
 
 完整对照见 [Sign an MSIX package](https://learn.microsoft.com/windows/msix/package/signing-package-overview)。
